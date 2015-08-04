@@ -25,6 +25,7 @@
     <module>uniquecount</module>
     <module>r</module>
     <module>echoserver</module>
+    <module>linearroad</module>
   </modules>
 
   <properties>
