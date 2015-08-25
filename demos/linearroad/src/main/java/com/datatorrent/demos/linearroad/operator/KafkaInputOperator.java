@@ -19,7 +19,9 @@ import java.nio.ByteBuffer;
 
 import kafka.message.Message;
 
+import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.Operator;
 
 import com.datatorrent.contrib.kafka.AbstractKafkaInputOperator;
 import com.datatorrent.contrib.kafka.KafkaConsumer;
@@ -28,13 +30,14 @@ import com.datatorrent.demos.linearroad.data.DailyBalanceQuery;
 import com.datatorrent.demos.linearroad.data.PositionReport;
 import com.datatorrent.netlet.util.DTThrowable;
 
-public class KafkaInputOperator extends AbstractKafkaInputOperator<KafkaConsumer>
+public class KafkaInputOperator extends AbstractKafkaInputOperator<KafkaConsumer> implements Operator.IdleTimeHandler
 {
   public final transient DefaultOutputPort<PositionReport> positionReport = new DefaultOutputPort<PositionReport>();
   public final transient DefaultOutputPort<DailyBalanceQuery> dailyBalanceQuery = new DefaultOutputPort<DailyBalanceQuery>();
   public final transient DefaultOutputPort<AccountBalanceQuery> accountBalanceQuery = new DefaultOutputPort<AccountBalanceQuery>();
 
   private String delimiter = ",";
+  private boolean startScanningFiles;
 
   public String getDelimiter()
   {
@@ -44,6 +47,23 @@ public class KafkaInputOperator extends AbstractKafkaInputOperator<KafkaConsumer
   public void setDelimiter(String delimiter)
   {
     this.delimiter = delimiter;
+  }
+
+  public final transient DefaultInputPort<Boolean> startScanning = new DefaultInputPort<Boolean>()
+  {
+    @Override
+    public void process(Boolean aBoolean)
+    {
+      startScanningFiles = aBoolean;
+    }
+  };
+
+  @Override
+  public void handleIdleTime()
+  {
+    if (startScanningFiles) {
+      emitTuples();
+    }
   }
 
   @Override

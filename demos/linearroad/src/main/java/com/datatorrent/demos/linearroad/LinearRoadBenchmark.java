@@ -15,6 +15,8 @@
  */
 package com.datatorrent.demos.linearroad;
 
+import java.util.Arrays;
+
 import org.apache.hadoop.conf.Configuration;
 
 import com.datatorrent.api.*;
@@ -32,6 +34,7 @@ public class LinearRoadBenchmark implements StreamingApplication
   public void populateDAG(DAG dag, Configuration configuration)
   {
     int numberOfExpressWays = configuration.getInt("dt.application.linearroad.numberOfExpressWays", 1);
+    boolean dynamicPartitioning = configuration.getBoolean("dt.application.linearroad.dynamicPartitioning", false);
     boolean isKafka = configuration.getBoolean("dt.application.linearroad.kafka", true);
     HistoricalInputReceiver historicalInputReceiver = dag.addOperator("HistoricalReceiver", new HistoricalInputReceiver());
     DefaultOutputPort<PositionReport> positionReport;
@@ -39,6 +42,7 @@ public class LinearRoadBenchmark implements StreamingApplication
     DefaultOutputPort<AccountBalanceQuery> accountBalanceQuery;
     if (isKafka) {
       KafkaInputOperator receiver = dag.addOperator("KafkaReceiver", new KafkaInputOperator());
+      dag.addStream("start-stream-data", historicalInputReceiver.readCurrentData, receiver.startScanning);
       positionReport = receiver.positionReport;
       dailyBalanceQuery = receiver.dailyBalanceQuery;
       accountBalanceQuery = receiver.accountBalanceQuery;
@@ -63,7 +67,17 @@ public class LinearRoadBenchmark implements StreamingApplication
     dailyBalanceStore.setPartitionCount(numberOfExpressWays * 4);
     dag.setAttribute(accidentDetector, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
     dag.setAttribute(averageSpeedCalculator, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
-    dag.setAttribute(accidentNotifier, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
+    if (dynamicPartitioning) {
+      ThroughPutBasedPartitioner throughPutBasedPartitioner = new ThroughPutBasedPartitioner(1);
+      throughPutBasedPartitioner.setMinPartitionCount(configuration.getInt("dt.application.linearroad.accidentNotifier.minPartitions", 1));
+      throughPutBasedPartitioner.setMaxPartitionCount(configuration.getInt("dt.application.linearroad.accidentNotifier.maxPartitions", 4));
+      throughPutBasedPartitioner.setCooldownMillis(configuration.getInt("dt.application.linearroad.accidentNotifier.cooldownMillis", 30000));
+      dag.setAttribute(accidentNotifier, Context.OperatorContext.PARTITIONER, throughPutBasedPartitioner);
+      dag.setAttribute(accidentNotifier, Context.OperatorContext.STATS_LISTENERS, Arrays.asList(new StatsListener[]{throughPutBasedPartitioner}));
+    }
+    else {
+      dag.setAttribute(accidentNotifier, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
+    }
     dag.setAttribute(tollNotifier, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
 
     HdfsOutputOperator accidentNotifierConsole = dag.addOperator("Accident-Notifier-Console", new HdfsOutputOperator());
