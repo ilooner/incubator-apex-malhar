@@ -133,9 +133,6 @@ public class DailyBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
   {
     try {
       for (DailyBalanceQuery dailyBalanceQuery : queryList) {
-        if (dailyBalanceQuery.getDay() == 0) {
-          continue;
-        }
         Slice slice = new Slice(getKeyForQuery(dailyBalanceQuery));
         long bucketKey = getQueryBucket(dailyBalanceQuery);
         byte[] value = getUncommitted(bucketKey, slice);
