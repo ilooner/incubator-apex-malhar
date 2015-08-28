@@ -128,7 +128,7 @@ public class TollNotifier extends BaseOperator
       VehicleSpeedPair vehicle2SpeedPair;
       double averageSpeed = 0;
       int vehiclesInPrevMin = 0;
-      boolean foundLast = false;
+      //boolean foundLast = false;
       int totalKeysFound = 0;
       for (int i = 1; i <= 5; i++) {
         tollNotifierKey.minute--;
@@ -138,7 +138,7 @@ public class TollNotifier extends BaseOperator
           averageSpeed += (vehicle2SpeedPair.totalSpeed / vehicle2SpeedPair.totalCars);
           if (i == 1) {
             vehiclesInPrevMin = vehicle2SpeedPair.totalCars;
-            foundLast = true;
+            // foundLast = true;
           }
         }
       }
@@ -156,11 +156,11 @@ public class TollNotifier extends BaseOperator
         toll = 2 * (vehiclesInPrevMin - 50) * (vehiclesInPrevMin - 50);
       }
       speedTollPair = new Pair((int) averageSpeed, toll);
-      if (foundLast) {
-        lavAndToll.put(new TollNotifierKey(tuple), speedTollPair);
-        //remove minute - 5
-        vehiclesStats.remove(tollNotifierKey);
-      }
+      //if (foundLast) {
+      lavAndToll.put(new TollNotifierKey(tuple), speedTollPair);
+      //remove minute - 5
+      vehiclesStats.remove(tollNotifierKey);
+      //}
     }
     vehicleStats.averageSpeed = speedTollPair.left;
     vehicleStats.toll = speedTollPair.right;
