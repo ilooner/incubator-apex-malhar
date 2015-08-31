@@ -142,9 +142,6 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
           TollTuple tuple = codec.fromKeyValue(slice, value);
           accountBalanceQueryResult.emit(new QueryResult(2, 0, accountBalanceQuery.getEventTime(), accountBalanceQuery.getEventTime() + (System.currentTimeMillis() - accountBalanceQuery.getEntryTime()) / 1000, accountBalanceQuery.getQueryId(), tuple.getTolls(), tuple.getEventTime()));
         }
-        else {
-          accountBalanceQueryResult.emit(new QueryResult(2, 0, accountBalanceQuery.getEventTime(), accountBalanceQuery.getEventTime() + (System.currentTimeMillis() - accountBalanceQuery.getEntryTime()) / 1000, accountBalanceQuery.getQueryId(), 0, 0));
-        }
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
