@@ -40,7 +40,6 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
   public void setup(Context.OperatorContext a)
   {
     super.setup(a);
-    accountBalanceQueryResult = new DefaultOutputPort<QueryResult>();
   }
 
   @Override
@@ -92,7 +91,7 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     }
   };
 
-  public transient DefaultOutputPort<QueryResult> accountBalanceQueryResult;
+  public transient DefaultOutputPort<QueryResult> accountBalanceQueryResult = new DefaultOutputPort<QueryResult>();
 
   private long getQueryBucket(AccountBalanceQuery query)
   {

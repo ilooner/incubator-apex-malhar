@@ -93,7 +93,7 @@ public class DailyBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     }
   };
 
-  public transient DefaultOutputPort<QueryResult> dailyBalanceQueryResult;
+  public transient final DefaultOutputPort<QueryResult> dailyBalanceQueryResult = new DefaultOutputPort<QueryResult>();
 
   private long getQueryBucket(DailyBalanceQuery query)
   {
