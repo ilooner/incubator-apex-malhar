@@ -53,8 +53,16 @@
     <value></value>
   </property>
   <property>
+    <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.partitionCount</name>
+    <value>4</value>
+  </property>
+  <property>
     <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.fileStore.basePath</name>
     <value></value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.partitionCount</name>
+    <value>4</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.Receiver.prop.directory</name>

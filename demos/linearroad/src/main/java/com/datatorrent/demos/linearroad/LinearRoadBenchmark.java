@@ -64,8 +64,6 @@ public class LinearRoadBenchmark implements StreamingApplication
     AccountBalanceStore accountBalanceStore = dag.addOperator("AccountBalanceStore", new AccountBalanceStore());
     DailyBalanceStore dailyBalanceStore = dag.addOperator("DailyBalanceStore", new DailyBalanceStore());
     //setting partitions
-    accountBalanceStore.setPartitionCount(numberOfExpressWays * 4);
-    dailyBalanceStore.setPartitionCount(numberOfExpressWays * 4);
     if (enablePartitioning) {
       dag.setAttribute(accidentDetector, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
       dag.setAttribute(averageSpeedCalculator, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
