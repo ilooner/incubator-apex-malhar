@@ -36,24 +36,11 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
 {
   private transient List<AccountBalanceQuery> queryList = new ArrayList<>();
 
-  private String basePath;
-
-  public String getBasePath()
-  {
-    return basePath;
-  }
-
-  public void setBasePath(String basePath)
-  {
-    this.basePath = basePath;
-  }
-
   @Override
   public void setup(Context.OperatorContext a)
   {
-    int operatorId = a.getId();
-    ((HDHTFileAccessFSImpl) getFileStore()).setBasePath(basePath + Path.SEPARATOR + operatorId);
     super.setup(a);
+    accountBalanceQueryResult = new DefaultOutputPort<QueryResult>();
   }
 
   @Override
@@ -105,7 +92,7 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     }
   };
 
-  public transient final DefaultOutputPort<QueryResult> accountBalanceQueryResult = new DefaultOutputPort<QueryResult>();
+  public transient DefaultOutputPort<QueryResult> accountBalanceQueryResult;
 
   private long getQueryBucket(AccountBalanceQuery query)
   {

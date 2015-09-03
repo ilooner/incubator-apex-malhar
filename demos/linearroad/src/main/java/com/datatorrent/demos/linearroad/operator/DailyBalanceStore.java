@@ -37,23 +37,10 @@ public class DailyBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
 
   private transient List<DailyBalanceQuery> queryList = new ArrayList<>();
   private transient DailyBalanceQueryCodec dailyBalanceQueryCodec;
-  private String basePath;
-
-  public String getBasePath()
-  {
-    return basePath;
-  }
-
-  public void setBasePath(String basePath)
-  {
-    this.basePath = basePath;
-  }
 
   @Override
   public void setup(Context.OperatorContext a)
   {
-    int operatorId = a.getId();
-    ((HDHTFileAccessFSImpl) getFileStore()).setBasePath(basePath + Path.SEPARATOR + operatorId);
     super.setup(a);
     dailyBalanceQueryCodec = new DailyBalanceQueryCodec();
   }
@@ -106,7 +93,7 @@ public class DailyBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     }
   };
 
-  public transient final DefaultOutputPort<QueryResult> dailyBalanceQueryResult = new DefaultOutputPort<QueryResult>();
+  public transient DefaultOutputPort<QueryResult> dailyBalanceQueryResult;
 
   private long getQueryBucket(DailyBalanceQuery query)
   {
