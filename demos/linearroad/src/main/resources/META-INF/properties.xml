@@ -17,6 +17,30 @@
     <value>1</value>
   </property>
   <property>
+    <name>dt.application.linearroad.enablePartitioning</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>dt.application.linearroad.dynamicPartitioning</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>dt.application.linearroad.kafka</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>dt.application.linearroad.accidentNotifier.minPartitions</name>
+    <value>1</value>
+  </property>
+  <property>
+    <name>dt.application.linearroad.accidentNotifier.maxPartitions</name>
+    <value>4</value>
+  </property>
+  <property>
+    <name>dt.application.linearroad.accidentNotifier.cooldownMillis</name>
+    <value>30000</value>
+  </property>
+  <property>
     <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.flushSize</name>
     <value>2000000</value>
   </property>
@@ -25,15 +49,7 @@
     <value>2000000</value>
   </property>
   <property>
-    <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.basePath</name>
-    <value></value>
-  </property>
-  <property>
     <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.fileStore.basePath</name>
-    <value></value>
-  </property>
-  <property>
-    <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.basePath</name>
     <value></value>
   </property>
   <property>

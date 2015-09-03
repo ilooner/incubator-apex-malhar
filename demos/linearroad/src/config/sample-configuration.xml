@@ -1,7 +1,7 @@
 <configuration>
   <property>
     <name>dt.attr.APPLICATION_NAME</name>
-    <value>LR-1</value>
+    <value>LinearRoad</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.attr.MASTER_MEMORY_MB</name>
@@ -9,7 +9,12 @@
   </property>
   <property>
     <name>dt.attr.CONTAINER_JVM_OPTIONS</name>
-    <value>-Xmx4608m -server -Dlog4j.debug=true -Xloggc:&lt;LOG_DIR&gt;/gc.log -verbose:gc -XX:+PrintGCDateStamps</value>
+    <value>-Xmx4608m -server -Dlog4j.debug=true -Xloggc:&lt;LOG_DIR&gt;/gc.log -verbose:gc -XX:+PrintGCDateStamps
+    </value>
+  </property>
+  <property>
+    <name>dt.application.linearroad.numberOfExpressWays</name>
+    <value>1</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.flushSize</name>
@@ -20,20 +25,12 @@
     <value>2000000</value>
   </property>
   <property>
-    <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.basePath</name>
-    <value>/user/gaurav/linearroad/dailybalancestore</value>
-  </property>
-  <property>
     <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.fileStore.basePath</name>
-    <value>/user/gaurav/linearroad/dailybalancestore</value>
-  </property>
-  <property>
-    <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.basePath</name>
-    <value>/user/gaurav/linearroad/accountbalancestore</value>
+    <value>/user/gaurav/linearroad/dailybalancestore-part</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.fileStore.basePath</name>
-    <value>/user/gaurav/linearroad/accountbalancestore</value>
+    <value>/user/gaurav/linearroad/accountbalancestore-part</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.Receiver.prop.directory</name>
@@ -48,21 +45,38 @@
     <value>4096</value>
   </property>
   <property>
-    <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.partitionCount</name>
-    <value>1</value>
+    <name>dt.application.LinearRoad.operator.Receiver.prop.emitBatchSize</name>
+    <value>2000</value>
   </property>
   <property>
-    <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.partitionCount</name>
-    <value>1</value>
+    <name>dt.application.LinearRoad.operator.HistoricalReceiver.prop.emitBatchSize</name>
+    <value>2000</value>
+  </property>
+
+  <!-- Kafka -->
+  <property>
+    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.consumer.topic</name>
+    <value>linearroad</value>
   </property>
   <property>
-    <name>dt.application.LinearRoad.operator.AccidentDetector.attr.PARTITIONER</name>
-    <value>com.datatorrent.common.partitioner.StatelessPartitioner:1</value>
+    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.consumer.clientId</name>
+    <value>linearroad_poc_client</value>
   </property>
   <property>
-    <name>dt.application.LinearRoad.operator.TollNotifier.attr.PARTITIONER</name>
-    <value>com.datatorrent.common.partitioner.StatelessPartitioner:1</value>
+    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.initialOffset</name>
+    <value>latest</value>
   </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.zookeeper</name>
+    <value>node26.morado.com:2189</value>
+  </property>
+
+  <!-- disable repartitioning -->
+  <property>
+    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.repartitionInterval</name>
+    <value>-1</value>
+  </property>
+
 
   <!-- Output Operators-->
   <property>
