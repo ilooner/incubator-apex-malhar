@@ -16,6 +16,7 @@
 package com.datatorrent.demos.linearroad.operator;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
@@ -38,6 +40,7 @@ public class AccidentDetector extends BaseOperator
 {
   private HashMap<Integer, MutablePair<PositionReport, MutableInt>> vehicleIdPosition = Maps.newHashMap();
   private HashMap<Integer, MutablePair<AccidentDetectTuple, List<Integer>>> accidentVehicleMap = Maps.newHashMap();
+  private HashSet<AccidentKey> accidentKeyHashSet = Sets.newHashSet();
   private HashMap<AccidentKey, HashMap<Integer, Integer>> stoppedVehiclesMap = Maps.newHashMap();
 
   private static Logger logger = LoggerFactory.getLogger(AccidentDetector.class);
@@ -51,22 +54,8 @@ public class AccidentDetector extends BaseOperator
     public void process(PositionReport positionReport)
     {
       if (!Utils.isTravelLane(positionReport)) {
-        if (accidentVehicleMap.containsKey(positionReport.getVehicleId())) {
-          MutablePair<AccidentDetectTuple, List<Integer>> accidentKeyListMutablePair = accidentVehicleMap.remove(positionReport.getVehicleId());
-          //Accident cleared
-          HashMap<Integer, Integer> vehicleIds2EventTime = stoppedVehiclesMap.get(accidentKeyListMutablePair.getLeft().accidentKey);
-          for (Integer vehicleId : accidentKeyListMutablePair.getRight()) {
-            accidentVehicleMap.remove(vehicleId);
-            vehicleIds2EventTime.remove(vehicleId);
-          }
-          if (vehicleIds2EventTime.size() == 0) {
-            stoppedVehiclesMap.remove(accidentKeyListMutablePair.getLeft().accidentKey);
-          }
-          accidentKeyListMutablePair.getLeft().eventTime = positionReport.getEventTime();
-          accidentClearReport.emit(accidentKeyListMutablePair.getLeft());
-          logger.info("accident clear {}", accidentKeyListMutablePair.getLeft());
-          vehicleIdPosition.remove(positionReport.getVehicleId());
-        }
+        clearAccident(positionReport, vehicleIdPosition.get(positionReport.getVehicleId()));
+        vehicleIdPosition.remove(positionReport.getVehicleId());
         return;
       }
 
@@ -77,64 +66,44 @@ public class AccidentDetector extends BaseOperator
           if (existingVehiclePosition.getRight().intValue() >= 4) {
             if (!accidentVehicleMap.containsKey(positionReport.getVehicleId())) {
               AccidentKey accidentKey = new AccidentKey(positionReport);
-              if (stoppedVehiclesMap.containsKey(accidentKey)) {
-                //Possible Accident Detected
-                HashMap<Integer, Integer> stoppedVehicleIds2EventTime = stoppedVehiclesMap.get(accidentKey);
-                stoppedVehicleIds2EventTime.remove(positionReport.getVehicleId());
-                List<Integer> vehiclesInAccident = Lists.newLinkedList();
-                for (Map.Entry<Integer, Integer> entry : stoppedVehicleIds2EventTime.entrySet()) {
-                  if (entry.getValue() <= positionReport.getEventTime() && positionReport.getEventTime() <= entry.getValue() + 30) {
-                    vehiclesInAccident.add(entry.getKey());
+              //This means that accident has occurred but this car is not involved in accident
+              if (!accidentKeyHashSet.contains(accidentKey)) {
+                if (stoppedVehiclesMap.containsKey(accidentKey)) {
+                  //Possible Accident Detected
+                  HashMap<Integer, Integer> stoppedVehicleIds2EventTime = stoppedVehiclesMap.get(accidentKey);
+                  stoppedVehicleIds2EventTime.remove(positionReport.getVehicleId());
+                  List<Integer> vehiclesInAccident = Lists.newLinkedList();
+                  for (Map.Entry<Integer, Integer> entry : stoppedVehicleIds2EventTime.entrySet()) {
+                    if (entry.getValue() <= positionReport.getEventTime() && positionReport.getEventTime() <= entry.getValue() + 30) {
+                      vehiclesInAccident.add(entry.getKey());
+                    }
+                  }
+                  stoppedVehicleIds2EventTime.put(positionReport.getVehicleId(), positionReport.getEventTime());
+                  if (vehiclesInAccident.size() > 0) {
+                    vehiclesInAccident.add(positionReport.getVehicleId());
+                    //Accident detected
+                    MutablePair<AccidentDetectTuple, List<Integer>> accidentKeyListMutablePair = new MutablePair<>(new AccidentDetectTuple(accidentKey, positionReport.getEventTime()), vehiclesInAccident);
+                    accidentVehicleMap.put(positionReport.getVehicleId(), accidentKeyListMutablePair);
+                    for (Integer entry : vehiclesInAccident) {
+                      accidentVehicleMap.put(entry, accidentKeyListMutablePair);
+                    }
+                    accidentDetectedReport.emit(accidentKeyListMutablePair.getLeft());
+                    accidentKeyHashSet.add(accidentKey);
+                    logger.info("accident detected {}", accidentKeyListMutablePair.getLeft());
                   }
                 }
-                stoppedVehicleIds2EventTime.put(positionReport.getVehicleId(), positionReport.getEventTime());
-                if (vehiclesInAccident.size() > 0) {
-                  vehiclesInAccident.add(positionReport.getVehicleId());
-                  //Accident detected
-                  MutablePair<AccidentDetectTuple, List<Integer>> accidentKeyListMutablePair = new MutablePair<>(new AccidentDetectTuple(accidentKey, positionReport.getEventTime()), vehiclesInAccident);
-                  accidentVehicleMap.put(positionReport.getVehicleId(), accidentKeyListMutablePair);
-                  for (Integer entry : vehiclesInAccident) {
-                    accidentVehicleMap.put(entry, accidentKeyListMutablePair);
-                  }
-                  accidentDetectedReport.emit(accidentKeyListMutablePair.getLeft());
-                  logger.info("accident detected {}", accidentKeyListMutablePair.getLeft());
+                else {
+                  HashMap<Integer, Integer> vehicleIds2EventTime = Maps.newHashMap();
+                  vehicleIds2EventTime.put(positionReport.getVehicleId(), positionReport.getEventTime());
+                  stoppedVehiclesMap.put(accidentKey, vehicleIds2EventTime);
                 }
-              }
-              else {
-                HashMap<Integer, Integer> vehicleIds2EventTime = Maps.newHashMap();
-                vehicleIds2EventTime.put(positionReport.getVehicleId(), positionReport.getEventTime());
-                stoppedVehiclesMap.put(accidentKey, vehicleIds2EventTime);
               }
             }
           }
           existingVehiclePosition.setLeft(positionReport);
         }
         else {
-          if (accidentVehicleMap.containsKey(positionReport.getVehicleId())) {
-            MutablePair<AccidentDetectTuple, List<Integer>> accidentKeyListMutablePair = accidentVehicleMap.remove(positionReport.getVehicleId());
-            //Accident cleared
-            HashMap<Integer, Integer> vehicleIds2EventTime = stoppedVehiclesMap.get(accidentKeyListMutablePair.getLeft().accidentKey);
-            for (Integer vehicleId : accidentKeyListMutablePair.getRight()) {
-              accidentVehicleMap.remove(vehicleId);
-              vehicleIds2EventTime.remove(vehicleId);
-            }
-            if (vehicleIds2EventTime.size() == 0) {
-              stoppedVehiclesMap.remove(accidentKeyListMutablePair.getLeft().accidentKey);
-            }
-            accidentKeyListMutablePair.getLeft().eventTime = positionReport.getEventTime();
-            accidentClearReport.emit(accidentKeyListMutablePair.getLeft());
-            logger.info("accident clear {}", accidentKeyListMutablePair.getLeft());
-          }
-          else if (existingVehiclePosition.getRight().intValue() >= 4) {
-            AccidentKey key = new AccidentKey(existingVehiclePosition.getLeft());
-            HashMap<Integer, Integer> vehicleIds2EventTime = stoppedVehiclesMap.get(key);
-            if (vehicleIds2EventTime != null) {
-              vehicleIds2EventTime.remove(positionReport.getVehicleId());
-              if (vehicleIds2EventTime.size() == 0) {
-                stoppedVehiclesMap.remove(key);
-              }
-            }
-          }
+          clearAccident(positionReport, existingVehiclePosition);
           existingVehiclePosition.setLeft(positionReport);
           existingVehiclePosition.getRight().setValue(1);
         }
@@ -150,6 +119,36 @@ public class AccidentDetector extends BaseOperator
       return new GenericPositionReportCodec();
     }
   };
+
+  private void clearAccident(PositionReport positionReport, MutablePair<PositionReport, MutableInt> existingVehiclePosition)
+  {
+    if (accidentVehicleMap.containsKey(positionReport.getVehicleId())) {
+      MutablePair<AccidentDetectTuple, List<Integer>> accidentKeyListMutablePair = accidentVehicleMap.remove(positionReport.getVehicleId());
+      //Accident cleared
+      HashMap<Integer, Integer> vehicleIds2EventTime = stoppedVehiclesMap.get(accidentKeyListMutablePair.getLeft().accidentKey);
+      for (Integer vehicleId : accidentKeyListMutablePair.getRight()) {
+        accidentVehicleMap.remove(vehicleId);
+        vehicleIds2EventTime.remove(vehicleId);
+      }
+      if (vehicleIds2EventTime.size() == 0) {
+        stoppedVehiclesMap.remove(accidentKeyListMutablePair.getLeft().accidentKey);
+      }
+      accidentKeyListMutablePair.getLeft().eventTime = positionReport.getEventTime();
+      accidentClearReport.emit(accidentKeyListMutablePair.getLeft());
+      accidentKeyHashSet.remove(accidentKeyListMutablePair.getLeft().accidentKey);
+      logger.info("accident clear {}", accidentKeyListMutablePair.getLeft());
+    }
+    else if (existingVehiclePosition != null && existingVehiclePosition.getRight().intValue() >= 4) {
+      AccidentKey key = new AccidentKey(existingVehiclePosition.getLeft());
+      HashMap<Integer, Integer> vehicleIds2EventTime = stoppedVehiclesMap.get(key);
+      if (vehicleIds2EventTime != null) {
+        vehicleIds2EventTime.remove(positionReport.getVehicleId());
+        if (vehicleIds2EventTime.size() == 0) {
+          stoppedVehiclesMap.remove(key);
+        }
+      }
+    }
+  }
 
   private boolean isVehicleStopped(PositionReport first, PositionReport second)
   {
