@@ -38,7 +38,11 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <netbeans.hint.license>malhar-inc</netbeans.hint.license>
     <maven.deploy.skip>false</maven.deploy.skip>
+<<<<<<< HEAD
     <dt.framework.version>3.1.0</dt.framework.version>
+=======
+    <dt.framework.version>3.1.0-SNAPSHOT</dt.framework.version>
+>>>>>>> caf85bb... MLHR-1803 Made the twitter demo us an embeddable query operator.
     <!-- the following properties match the properties defined in core/pom.xml -->
     <jackson.version>1.9.2</jackson.version>
     <jersey.version>1.9</jersey.version>
