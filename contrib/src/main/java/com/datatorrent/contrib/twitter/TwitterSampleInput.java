@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import twitter4j.*;
 import twitter4j.conf.ConfigurationBuilder;
 
+import com.datatorrent.api.AutoMetric;
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.InputOperator;
@@ -98,6 +99,9 @@ public class TwitterSampleInput implements InputOperator, ActivationListener<Ope
   private String accessTokenSecret;
   /* If twitter connection breaks then do we need to reconnect or exit */
   private boolean reConnect;
+
+  @AutoMetric
+  private long numTweets;
 
   @Override
   public void setup(OperatorContext context)
@@ -255,6 +259,8 @@ public class TwitterSampleInput implements InputOperator, ActivationListener<Ope
   public void emitTuples()
   {
     for (int size = statuses.size(); size-- > 0;) {
+      numTweets++;
+
       Status s = statuses.poll();
       if (status.isConnected()) {
         status.emit(s);
