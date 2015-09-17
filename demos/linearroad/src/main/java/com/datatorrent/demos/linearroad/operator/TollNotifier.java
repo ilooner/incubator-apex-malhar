@@ -80,14 +80,8 @@ public class TollNotifier extends BaseOperator
 
   private void processPositionReport(PositionReport tuple)
   {
-    if(tuple.getVehicleId() == 5096) {
-      logger.info(" before tuple {}");
-    }
     if (Utils.isExitLane(tuple)) {
       return;
-    }
-    if(tuple.getVehicleId() == 5096) {
-      logger.info(" after tuple {}");
     }
     partitioningKey.drainKey(tuple);
     int vehicleId = tuple.getVehicleId();
