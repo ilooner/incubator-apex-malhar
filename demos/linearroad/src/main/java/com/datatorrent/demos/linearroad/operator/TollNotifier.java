@@ -80,8 +80,14 @@ public class TollNotifier extends BaseOperator
 
   private void processPositionReport(PositionReport tuple)
   {
+    if(tuple.getVehicleId() == 5096) {
+      logger.info(" before tuple {}");
+    }
     if (Utils.isExitLane(tuple)) {
       return;
+    }
+    if(tuple.getVehicleId() == 5096) {
+      logger.info(" after tuple {}");
     }
     partitioningKey.drainKey(tuple);
     int vehicleId = tuple.getVehicleId();
@@ -149,7 +155,7 @@ public class TollNotifier extends BaseOperator
         averageSpeed = averageSpeed / totalKeysFound;
       }
       else {
-        averageSpeed = -1;
+        averageSpeed = 0;
       }
 
       if (averageSpeed < 40 && vehiclesInPrevMin > 50 && !reportedAccident) {
