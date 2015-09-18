@@ -40,7 +40,18 @@ import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
 public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> implements Operator.IdleTimeHandler
 {
   protected transient BufferedReader br;
-  private boolean startScanningFiles;
+  private boolean historicalScanFinished;
+  private boolean startScanningData = false;
+
+  public boolean isStartScanningData()
+  {
+    return startScanningData;
+  }
+
+  public void setStartScanningData(boolean startScanningData)
+  {
+    this.startScanningData = startScanningData;
+  }
 
   public final transient DefaultOutputPort<PositionReport> positionReport = new DefaultOutputPort<PositionReport>();
   public final transient DefaultOutputPort<DailyBalanceQuery> dailyBalanceQuery = new DefaultOutputPort<DailyBalanceQuery>();
@@ -110,7 +121,7 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
     @Override
     public void process(Boolean aBoolean)
     {
-      startScanningFiles = aBoolean;
+      historicalScanFinished = aBoolean;
     }
   };
 
@@ -119,7 +130,7 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   {
     super.endWindow();
     if (scanner instanceof CustomDirectoryScanner) {
-      ((CustomDirectoryScanner) scanner).setStartScan(startScanningFiles);
+      ((CustomDirectoryScanner) scanner).setStartScan(historicalScanFinished && startScanningData);
     }
   }
 

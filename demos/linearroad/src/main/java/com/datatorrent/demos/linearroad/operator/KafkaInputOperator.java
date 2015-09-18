@@ -37,7 +37,18 @@ public class KafkaInputOperator extends AbstractKafkaInputOperator<KafkaConsumer
   public final transient DefaultOutputPort<AccountBalanceQuery> accountBalanceQuery = new DefaultOutputPort<AccountBalanceQuery>();
 
   private String delimiter = ",";
-  private boolean startScanningFiles;
+  private boolean historicalScanFinished;
+  private boolean startScanningData = false;
+
+  public boolean isStartScanningData()
+  {
+    return startScanningData;
+  }
+
+  public void setStartScanningData(boolean startScanningData)
+  {
+    this.startScanningData = startScanningData;
+  }
 
   public String getDelimiter()
   {
@@ -54,14 +65,14 @@ public class KafkaInputOperator extends AbstractKafkaInputOperator<KafkaConsumer
     @Override
     public void process(Boolean aBoolean)
     {
-      startScanningFiles = aBoolean;
+      historicalScanFinished = aBoolean;
     }
   };
 
   @Override
   public void handleIdleTime()
   {
-    if (startScanningFiles) {
+    if (historicalScanFinished && startScanningData) {
       emitTuples();
     }
   }
