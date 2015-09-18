@@ -77,13 +77,14 @@ public class DailyBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     @Override
     public void process(TollTuple tollTuple)
     {
+      /*
       try {
         if (tollTuple.getTolls() != -1) {
           processEvent(tollTuple);
         }
       } catch (IOException ex) {
         throw new RuntimeException(ex);
-      }
+      } */
     }
 
     @Override
