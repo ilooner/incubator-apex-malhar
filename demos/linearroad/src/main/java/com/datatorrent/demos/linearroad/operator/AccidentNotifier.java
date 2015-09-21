@@ -76,7 +76,7 @@ public class AccidentNotifier extends BaseOperator
         if (accidentKeySet.containsKey(partitioningKey)) {
           Pair accidentTime = accidentKeySet.get(partitioningKey);
           if (eventMinute >= (accidentTime.left + 1) && (accidentTime.right) >= eventMinute) {
-            accidentNotification.emit(new AccidentNotificationTuple(tuple.getEventTime(), tuple.getEventTime() + (System.currentTimeMillis() - tuple.getEntryTime()) / 1000, tuple.getVehicleId(), tuple.getSegment(), partitioningKey.expressWayId, partitioningKey.direction));
+            accidentNotification.emit(new AccidentNotificationTuple(tuple.getEventTime(), tuple.getEventTime() + (System.currentTimeMillis() - tuple.getEntryTime()) / 1000, tuple.getVehicleId(), partitioningKey.segment, partitioningKey.expressWayId, partitioningKey.direction));
             notifyTollCalculator.emit(new TollNotifier.TollNotifierKey(tuple));
             break;
           }

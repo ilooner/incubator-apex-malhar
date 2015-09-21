@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 
 import kafka.message.Message;
 
+import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.Operator;
@@ -39,6 +40,14 @@ public class KafkaInputOperator extends AbstractKafkaInputOperator<KafkaConsumer
   private String delimiter = ",";
   private boolean historicalScanFinished;
   private boolean startScanningData = false;
+  private transient long spinMillis;
+
+  @Override
+  public void setup(Context.OperatorContext context)
+  {
+    super.setup(context);
+    spinMillis = context.getValue(Context.OperatorContext.SPIN_MILLIS);
+  }
 
   public boolean isStartScanningData()
   {
@@ -74,6 +83,13 @@ public class KafkaInputOperator extends AbstractKafkaInputOperator<KafkaConsumer
   {
     if (historicalScanFinished && startScanningData) {
       emitTuples();
+    }
+    else {
+      try {
+        Thread.sleep(spinMillis);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
