@@ -134,7 +134,10 @@ public class AccidentNotifier extends BaseOperator
         System.out.println("accident key set " + accidentKeySet + "invalid key " + positionReport);
         throw new RuntimeException("Invalid clear accident report" + key);
       }
-      accidentKeySet.get(key).right = Utils.getMinute(tuple.eventTime);
+      int minute = Utils.getMinute(tuple.eventTime);
+      if(minute < accidentKeySet.get(key).right) {
+        accidentKeySet.get(key).right = minute;
+      }
     }
 
     @Override
