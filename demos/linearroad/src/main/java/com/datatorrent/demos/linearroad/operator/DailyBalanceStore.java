@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.hadoop.fs.Path;
 
 import com.datatorrent.api.*;
+import com.datatorrent.api.annotation.InputPortFieldAnnotation;
 
 import com.datatorrent.contrib.hdht.AbstractSinglePortHDHTWriter;
 import com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl;
@@ -72,6 +73,7 @@ public class DailyBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     put(bucketKey, slice, codec.getValueBytes(a));
   }
 
+  @InputPortFieldAnnotation(optional = true)
   public transient final DefaultInputPort<TollTuple> currentToll = new DefaultInputPort<TollTuple>()
   {
     @Override

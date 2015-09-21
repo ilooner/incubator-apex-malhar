@@ -35,7 +35,6 @@ import com.datatorrent.lib.codec.KryoSerializableStreamCodec;
 
 public class AccidentNotifier extends BaseOperator
 {
-  //TODO: CLEAN THIS MAP
   HashMap<PartitioningKey, Pair> accidentKeySet = Maps.newHashMap();
   HashMap<Integer, PartitioningKey> vehicleId2Segment = Maps.newHashMap();
   public final transient DefaultOutputPort<TollNotifier.TollNotifierKey> notifyTollCalculator = new DefaultOutputPort<TollNotifier.TollNotifierKey>();
@@ -135,7 +134,7 @@ public class AccidentNotifier extends BaseOperator
         throw new RuntimeException("Invalid clear accident report" + key);
       }
       int minute = Utils.getMinute(tuple.eventTime);
-      if(minute < accidentKeySet.get(key).right) {
+      if (minute < accidentKeySet.get(key).right) {
         accidentKeySet.get(key).right = minute;
       }
     }

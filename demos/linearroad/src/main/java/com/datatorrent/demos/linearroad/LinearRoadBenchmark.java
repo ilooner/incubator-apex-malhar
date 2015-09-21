@@ -87,7 +87,7 @@ public class LinearRoadBenchmark implements StreamingApplication
     HdfsOutputOperator accountBalanceConsole = dag.addOperator("Account-Balance-Console", new HdfsOutputOperator());
 
     dag.addStream("position-report", positionReport, accidentDetector.positionReport, averageSpeedCalculator.positionReport, accidentNotifier.positionReport, tollNotifier.positionReport);
-    dag.addStream("current-toll-balance", tollNotifier.tollCharged, dailyBalanceStore.currentToll, accountBalanceStore.currentToll);
+    dag.addStream("current-toll-balance", tollNotifier.tollCharged, accountBalanceStore.currentToll);
 
     dag.addStream("historical-toll-balance", historicalInputReceiver.tollHistoryTuplePort, dailyBalanceStore.input, accountBalanceStore.input);
     dag.addStream("daily-balance-query", dailyBalanceQuery, dailyBalanceStore.dailyBalanceQuery);
