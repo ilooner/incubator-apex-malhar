@@ -39,4 +39,9 @@ public class Utils
   {
     return ((seconds / 60) + 1);
   }
+
+  public static int getSegment(int position)
+  {
+    return position / 5280;
+  }
 }

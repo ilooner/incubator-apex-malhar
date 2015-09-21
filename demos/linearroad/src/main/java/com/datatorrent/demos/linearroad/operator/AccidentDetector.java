@@ -246,6 +246,7 @@ public class AccidentDetector extends BaseOperator
         ", lane=" + lane +
         ", direction=" + direction +
         ", position=" + position +
+        ", seg=" + Utils.getSegment(position) +
         '}';
     }
 
