@@ -57,6 +57,16 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   public final transient DefaultOutputPort<DailyBalanceQuery> dailyBalanceQuery = new DefaultOutputPort<DailyBalanceQuery>();
   public final transient DefaultOutputPort<AccountBalanceQuery> accountBalanceQuery = new DefaultOutputPort<AccountBalanceQuery>();
 
+  public boolean isHistoricalScanFinished()
+  {
+    return historicalScanFinished;
+  }
+
+  public void setHistoricalScanFinished(boolean historicalScanFinished)
+  {
+    this.historicalScanFinished = historicalScanFinished;
+  }
+
   @Override
   protected InputStream openFile(Path path) throws IOException
   {
