@@ -111,7 +111,10 @@ public class AccidentNotifier extends BaseOperator
     @Override
     public void process(AccidentDetector.AccidentDetectTuple tuple)
     {
-      accidentKeySet.put(new PartitioningKey(tuple.accidentKey.expressWayId, tuple.accidentKey.direction, tuple.accidentKey.position / 5280), new Pair(Utils.getMinute(tuple.eventTime), Integer.MAX_VALUE - 1));
+      PartitioningKey partitioningKey1 = new PartitioningKey(tuple.accidentKey.expressWayId, tuple.accidentKey.direction, tuple.accidentKey.position / 5280);
+      if (!accidentKeySet.containsKey(partitioningKey1)) {
+        accidentKeySet.put(partitioningKey1, new Pair(Utils.getMinute(tuple.eventTime), Integer.MAX_VALUE - 1));
+      }
     }
 
     @Override
