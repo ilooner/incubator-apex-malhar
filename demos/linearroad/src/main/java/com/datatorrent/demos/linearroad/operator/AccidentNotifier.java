@@ -49,41 +49,46 @@ public class AccidentNotifier extends BaseOperator
     super.endWindow();
 
     for (PositionReport tuple : tupleList) {
-      if (Utils.isExitLane(tuple)) {
-        continue;
+      processTuple(tuple);
+    }
+    tupleList.clear();
+  }
+
+  private void processTuple(PositionReport tuple)
+  {
+    if (Utils.isExitLane(tuple)) {
+      return;
+    }
+    partitioningKey.drainKey(tuple);
+    if (vehicleId2Segment.containsKey(tuple.getVehicleId())) {
+      PartitioningKey vehicleKey = vehicleId2Segment.get(tuple.getVehicleId());
+      if (vehicleKey.equals(partitioningKey)) {
+        return;
       }
-      partitioningKey.drainKey(tuple);
-      if (vehicleId2Segment.containsKey(tuple.getVehicleId())) {
-        PartitioningKey vehicleKey = vehicleId2Segment.get(tuple.getVehicleId());
-        if (vehicleKey.equals(partitioningKey)) {
-          continue;
-        }
-        vehicleKey.drainKey(tuple);
+      vehicleKey.drainKey(tuple);
+    }
+    else {
+      vehicleId2Segment.put(tuple.getVehicleId(), new PartitioningKey(tuple));
+    }
+
+    int eventMinute = tuple.getMinute();
+    int eventSegment = tuple.getSegment();
+    for (int i = 0; i < 5; i++) {
+      if (tuple.getDirection() == 0) {
+        partitioningKey.segment = Math.min(eventSegment + i, 99);
       }
       else {
-        vehicleId2Segment.put(tuple.getVehicleId(), new PartitioningKey(tuple));
+        partitioningKey.segment = Math.max(eventSegment - i, 0);
       }
-
-      int eventMinute = tuple.getMinute();
-      int eventSegment = tuple.getSegment();
-      for (int i = 0; i < 5; i++) {
-        if (tuple.getDirection() == 0) {
-          partitioningKey.segment = Math.min(eventSegment + i, 99);
-        }
-        else {
-          partitioningKey.segment = Math.max(eventSegment - i, 0);
-        }
-        if (accidentKeySet.containsKey(partitioningKey)) {
-          Pair accidentTime = accidentKeySet.get(partitioningKey);
-          if (eventMinute >= (accidentTime.left + 1) && (accidentTime.right) >= eventMinute) {
-            accidentNotification.emit(new AccidentNotificationTuple(tuple.getEventTime(), tuple.getEventTime() + (System.currentTimeMillis() - tuple.getEntryTime()) / 1000, tuple.getVehicleId(), partitioningKey.segment, partitioningKey.expressWayId, partitioningKey.direction));
-            notifyTollCalculator.emit(new TollNotifier.TollNotifierKey(tuple));
-            break;
-          }
+      if (accidentKeySet.containsKey(partitioningKey)) {
+        Pair accidentTime = accidentKeySet.get(partitioningKey);
+        if (eventMinute >= (accidentTime.left + 1) && (accidentTime.right) >= eventMinute) {
+          accidentNotification.emit(new AccidentNotificationTuple(tuple.getEventTime(), tuple.getEventTime() + (System.currentTimeMillis() - tuple.getEntryTime()) / 1000, tuple.getVehicleId(), partitioningKey.segment, partitioningKey.expressWayId, partitioningKey.direction));
+          notifyTollCalculator.emit(new TollNotifier.TollNotifierKey(tuple));
+          return;
         }
       }
     }
-    tupleList.clear();
   }
 
   public transient final DefaultInputPort<PositionReport> positionReport = new DefaultInputPort<PositionReport>()
