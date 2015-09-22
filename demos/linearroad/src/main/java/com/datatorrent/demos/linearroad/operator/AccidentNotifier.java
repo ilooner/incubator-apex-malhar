@@ -41,6 +41,7 @@ public class AccidentNotifier extends BaseOperator
   public final transient DefaultOutputPort<AccidentNotificationTuple> accidentNotification = new DefaultOutputPort<AccidentNotificationTuple>();
 
   private final transient List<PositionReport> tupleList = Lists.newLinkedList();
+  private transient int MAX_VAL;
 
   @Override
   public void endWindow()
@@ -81,7 +82,7 @@ public class AccidentNotifier extends BaseOperator
       }
       if (accidentKeySet.containsKey(partitioningKey)) {
         Pair accidentTime = accidentKeySet.get(partitioningKey);
-        if ((eventMinute >= (accidentTime.left + 1) && accidentTime.right == Integer.MAX_VALUE -1) || (accidentTime.right) >= eventMinute) {
+        if ((eventMinute >= (accidentTime.left + 1) && accidentTime.right == MAX_VAL) || ((accidentTime.right) >= eventMinute && accidentTime.right != MAX_VAL)) {
           accidentNotification.emit(new AccidentNotificationTuple(tuple.getEventTime(), tuple.getEventTime() + (System.currentTimeMillis() - tuple.getEntryTime()) / 1000, tuple.getVehicleId(), partitioningKey.segment, partitioningKey.expressWayId, partitioningKey.direction));
           notifyTollCalculator.emit(new TollNotifier.TollNotifierKey(tuple));
           return;
@@ -112,7 +113,7 @@ public class AccidentNotifier extends BaseOperator
     {
       PartitioningKey partitioningKey1 = new PartitioningKey(tuple.accidentKey.expressWayId, tuple.accidentKey.direction, tuple.accidentKey.position / 5280);
       if (!accidentKeySet.containsKey(partitioningKey1)) {
-        accidentKeySet.put(partitioningKey1, new Pair(Utils.getMinute(tuple.eventTime), Integer.MAX_VALUE - 1));
+        accidentKeySet.put(partitioningKey1, new Pair(Utils.getMinute(tuple.eventTime), MAX_VAL));
       }
     }
 
@@ -153,6 +154,7 @@ public class AccidentNotifier extends BaseOperator
   {
     super.setup(context);
     partitioningKey = new PartitioningKey(-1, 0, 0);
+    MAX_VAL = Integer.MAX_VALUE - 1;
   }
 
   public static class AccidentNotifierCodec extends KryoSerializableStreamCodec<AccidentDetector.AccidentDetectTuple>
