@@ -15,6 +15,7 @@
  */
 package com.datatorrent.lib.appdata.props;
 
+import com.datatorrent.api.Context.OperatorContext;
 import com.google.common.collect.Lists;
 
 import java.util.List;
@@ -22,6 +23,11 @@ import java.util.List;
 public abstract class AbstractPropertyUpdater implements PropertyUpdater
 {
   private List<PropertyUpdate> pendingUpdates = Lists.newArrayList();
+
+  @Override
+  public void setup(OperatorContext context)
+  {
+  }
 
   @Override
   public void beginWindow(long windowId)
@@ -34,6 +40,11 @@ public abstract class AbstractPropertyUpdater implements PropertyUpdater
     applyUpdates(pendingUpdates);
 
     pendingUpdates.clear();
+  }
+
+  @Override
+  public void teardown()
+  {
   }
 
   @Override
