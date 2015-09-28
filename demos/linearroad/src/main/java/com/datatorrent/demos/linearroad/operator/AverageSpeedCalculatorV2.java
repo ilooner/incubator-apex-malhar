@@ -18,52 +18,27 @@ package com.datatorrent.demos.linearroad.operator;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.Maps;
 
-import com.datatorrent.api.Context;
-import com.datatorrent.api.DefaultInputPort;
-import com.datatorrent.api.DefaultOutputPort;
-
-import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.demos.linearroad.data.AverageSpeedTuple;
 import com.datatorrent.demos.linearroad.data.Pair;
 import com.datatorrent.demos.linearroad.data.PartitioningKey;
 import com.datatorrent.demos.linearroad.data.PositionReport;
-import com.datatorrent.lib.codec.KryoSerializableStreamCodec;
 
-public class AverageSpeedCalculator extends BaseOperator
+public class AverageSpeedCalculatorV2 extends AverageSpeedCalculator
 {
-  protected int currentMinute = -1;
-  protected HashMap<PartitioningKey, HashMap<Integer, Pair>> cache = Maps.newHashMap();
-  protected transient PartitioningKey partitioningKey;
-  public final transient DefaultOutputPort<AverageSpeedTuple> averageSpeed = new DefaultOutputPort<AverageSpeedTuple>();
-  public final transient DefaultInputPort<PositionReport> positionReport = new DefaultInputPort<PositionReport>()
-  {
-    @Override
-    public void process(PositionReport positionReport)
-    {
-      processTuple(positionReport);
-    }
 
-    @Override
-    public AverageSpeedCodec getStreamCodec()
-    {
-      return new AverageSpeedCodec();
-    }
-  };
-
+  @Override
   protected void processTuple(PositionReport positionReport)
   {
     if (currentMinute != positionReport.getMinute()) {
       for (Map.Entry<PartitioningKey, HashMap<Integer, Pair>> entry : cache.entrySet()) {
         PartitioningKey partitioningKey = entry.getKey();
-        int totalCars = entry.getValue().size();
+        int totalCars = 0;
         double totalSpeed = 0;
         for (Map.Entry<Integer, Pair> pairEntry : entry.getValue().entrySet()) {
-          totalSpeed += ((double) pairEntry.getValue().right / pairEntry.getValue().left);
+          totalSpeed += pairEntry.getValue().right;
+          totalCars += pairEntry.getValue().left;
         }
         AverageSpeedTuple averageSpeedTuple = new AverageSpeedTuple(partitioningKey.expressWayId, partitioningKey.direction, partitioningKey.segment, totalCars, totalSpeed, currentMinute);
         //logger.info(" average speed tuple {}", averageSpeedTuple);
@@ -86,25 +61,4 @@ public class AverageSpeedCalculator extends BaseOperator
     pair.left++;
     pair.right += positionReport.getVehicleSpeed();
   }
-
-  @Override
-  public void setup(Context.OperatorContext context)
-  {
-    partitioningKey = new PartitioningKey(-1, 0, 0);
-  }
-
-  public static class AverageSpeedCodec extends KryoSerializableStreamCodec<PositionReport>
-  {
-
-    @Override
-    public int getPartition(PositionReport positionReport)
-    {
-      int result = positionReport.getExpressWayId();
-      result = 31 * result + positionReport.getSegment();
-      result = 31 * result + positionReport.getDirection();
-      return result;
-    }
-  }
-
-  private static Logger logger = LoggerFactory.getLogger(AverageSpeedCalculator.class);
 }

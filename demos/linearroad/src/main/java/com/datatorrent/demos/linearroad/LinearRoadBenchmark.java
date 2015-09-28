@@ -57,7 +57,7 @@ public class LinearRoadBenchmark implements StreamingApplication
       accountBalanceQuery = receiver.accountBalanceQuery;
     }
 
-    AverageSpeedCalculator averageSpeedCalculator = dag.addOperator("AverageSpeedCalculator", new AverageSpeedCalculator());
+    AverageSpeedCalculatorV2 averageSpeedCalculator = dag.addOperator("AverageSpeedCalculator", new AverageSpeedCalculatorV2());
     TollNotifier tollNotifier = dag.addOperator("TollNotifier", new TollNotifier());
     AccidentDetector accidentDetector = dag.addOperator("AccidentDetector", new AccidentDetector());
     AccidentNotifier accidentNotifier = dag.addOperator("AccidentNotifier", new AccidentNotifier());

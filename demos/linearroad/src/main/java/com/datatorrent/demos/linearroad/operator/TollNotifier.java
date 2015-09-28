@@ -126,16 +126,17 @@ public class TollNotifier extends BaseOperator
     if (speedTollPair == null) {
       boolean reportedAccident = isReportedAccident(tollNotifierKey);
       VehicleSpeedPair vehicle2SpeedPair;
-      double averageSpeed = 0;
+      int averageSpeed = 0;
+      double totalSpeed = 0;
+      double totalVehicles = 0;
       int vehiclesInPrevMin = 0;
       //boolean foundLast = false;
-      int totalKeysFound = 0;
       for (int i = 1; i <= 5; i++) {
         tollNotifierKey.minute--;
         if (vehiclesStats.containsKey(tollNotifierKey)) {
-          totalKeysFound++;
           vehicle2SpeedPair = vehiclesStats.get(tollNotifierKey);
-          averageSpeed += (vehicle2SpeedPair.totalSpeed / vehicle2SpeedPair.totalCars);
+          totalSpeed += vehicle2SpeedPair.totalSpeed;
+          totalVehicles += vehicle2SpeedPair.totalCars;
           if (i == 1) {
             vehiclesInPrevMin = vehicle2SpeedPair.totalCars;
             // foundLast = true;
@@ -145,8 +146,8 @@ public class TollNotifier extends BaseOperator
 
       //toll and speed calculation
       int toll = 0;
-      if (totalKeysFound > 0) {
-        averageSpeed = averageSpeed / totalKeysFound;
+      if (totalVehicles > 0) {
+        averageSpeed = (int) Math.round(totalSpeed / totalVehicles);
       }
       else {
         averageSpeed = 0;
@@ -155,7 +156,7 @@ public class TollNotifier extends BaseOperator
       if (averageSpeed < 40 && vehiclesInPrevMin > 50 && !reportedAccident) {
         toll = 2 * (vehiclesInPrevMin - 50) * (vehiclesInPrevMin - 50);
       }
-      speedTollPair = new Pair((int) averageSpeed, toll);
+      speedTollPair = new Pair(averageSpeed, toll);
       //if (foundLast) {
       lavAndToll.put(new TollNotifierKey(tuple), speedTollPair);
       //remove minute - 5
