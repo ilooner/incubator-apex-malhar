@@ -19,15 +19,17 @@ public class VehicleSpeedPair
 {
   public int totalCars;
   public double totalSpeed;
+  public int uniqueCars;
 
   public VehicleSpeedPair()
   {
-    this(0, 0);
+    this(0, 0, 0);
   }
 
-  public VehicleSpeedPair(int totalCars, double totalSpeed)
+  public VehicleSpeedPair(int totalCars, double totalSpeed, int uniqueCars)
   {
     this.totalCars = totalCars;
+    this.uniqueCars = uniqueCars;
     this.totalSpeed = totalSpeed;
   }
 
@@ -36,6 +38,7 @@ public class VehicleSpeedPair
   {
     return "Pair{" +
       "totalCars=" + totalCars +
+      ", uniqueCars=" + uniqueCars +
       ", totalSpeed=" + totalSpeed +
       '}';
   }

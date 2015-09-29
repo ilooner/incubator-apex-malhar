@@ -65,7 +65,7 @@ public class AverageSpeedCalculator extends BaseOperator
         for (Map.Entry<Integer, Pair> pairEntry : entry.getValue().entrySet()) {
           totalSpeed += ((double) pairEntry.getValue().right / pairEntry.getValue().left);
         }
-        AverageSpeedTuple averageSpeedTuple = new AverageSpeedTuple(partitioningKey.expressWayId, partitioningKey.direction, partitioningKey.segment, totalCars, totalSpeed, currentMinute);
+        AverageSpeedTuple averageSpeedTuple = new AverageSpeedTuple(partitioningKey.expressWayId, partitioningKey.direction, partitioningKey.segment, totalCars, totalSpeed, currentMinute, totalCars);
         //logger.info(" average speed tuple {}", averageSpeedTuple);
         averageSpeed.emit(averageSpeedTuple);
       }

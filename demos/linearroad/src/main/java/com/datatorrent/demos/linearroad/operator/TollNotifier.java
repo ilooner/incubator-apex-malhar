@@ -138,7 +138,7 @@ public class TollNotifier extends BaseOperator
           totalSpeed += vehicle2SpeedPair.totalSpeed;
           totalVehicles += vehicle2SpeedPair.totalCars;
           if (i == 1) {
-            vehiclesInPrevMin = vehicle2SpeedPair.totalCars;
+            vehiclesInPrevMin = vehicle2SpeedPair.uniqueCars;
             // foundLast = true;
           }
         }
@@ -182,7 +182,7 @@ public class TollNotifier extends BaseOperator
     @Override
     public void process(AverageSpeedTuple averageSpeedTuple)
     {
-      vehiclesStats.put(new TollNotifierKey(averageSpeedTuple), new VehicleSpeedPair(averageSpeedTuple.getTotalVehicles(), averageSpeedTuple.getTotalSpeed()));
+      vehiclesStats.put(new TollNotifierKey(averageSpeedTuple), new VehicleSpeedPair(averageSpeedTuple.getTotalVehicles(), averageSpeedTuple.getTotalSpeed(), averageSpeedTuple.getTotalUniqueVehicles()));
     }
 
     @Override

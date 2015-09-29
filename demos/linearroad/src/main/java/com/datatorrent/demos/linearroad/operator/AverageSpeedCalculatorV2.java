@@ -34,13 +34,14 @@ public class AverageSpeedCalculatorV2 extends AverageSpeedCalculator
     if (currentMinute != positionReport.getMinute()) {
       for (Map.Entry<PartitioningKey, HashMap<Integer, Pair>> entry : cache.entrySet()) {
         PartitioningKey partitioningKey = entry.getKey();
+        int uniqueCars = entry.getValue().size();
         int totalCars = 0;
         double totalSpeed = 0;
         for (Map.Entry<Integer, Pair> pairEntry : entry.getValue().entrySet()) {
           totalSpeed += pairEntry.getValue().right;
           totalCars += pairEntry.getValue().left;
         }
-        AverageSpeedTuple averageSpeedTuple = new AverageSpeedTuple(partitioningKey.expressWayId, partitioningKey.direction, partitioningKey.segment, totalCars, totalSpeed, currentMinute);
+        AverageSpeedTuple averageSpeedTuple = new AverageSpeedTuple(partitioningKey.expressWayId, partitioningKey.direction, partitioningKey.segment, totalCars, totalSpeed, currentMinute, uniqueCars);
         //logger.info(" average speed tuple {}", averageSpeedTuple);
         averageSpeed.emit(averageSpeedTuple);
       }

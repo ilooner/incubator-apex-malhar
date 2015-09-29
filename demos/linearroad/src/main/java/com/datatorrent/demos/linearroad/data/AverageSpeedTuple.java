@@ -23,13 +23,14 @@ public class AverageSpeedTuple
   private int totalVehicles;
   private double totalSpeed;
   private int minute;
+  private int totalUniqueVehicles;
 
   private AverageSpeedTuple()
   {
 
   }
 
-  public AverageSpeedTuple(int expressWayId, int direction, int segment, int totalVehicles, double totalSpeed, int minute)
+  public AverageSpeedTuple(int expressWayId, int direction, int segment, int totalVehicles, double totalSpeed, int minute, int totalUniqueVehicles)
   {
     this.expressWayId = expressWayId;
     this.direction = direction;
@@ -37,6 +38,7 @@ public class AverageSpeedTuple
     this.totalVehicles = totalVehicles;
     this.totalSpeed = totalSpeed;
     this.minute = minute;
+    this.totalUniqueVehicles = totalUniqueVehicles;
   }
 
   public int getExpressWayId()
@@ -69,6 +71,11 @@ public class AverageSpeedTuple
     return minute;
   }
 
+  public int getTotalUniqueVehicles()
+  {
+    return totalUniqueVehicles;
+  }
+
   @Override
   public String toString()
   {
@@ -79,6 +86,7 @@ public class AverageSpeedTuple
       ", totalVehicles=" + totalVehicles +
       ", totalSpeed=" + totalSpeed +
       ", minute=" + minute +
+      ", totalUniqueVehicles=" + totalUniqueVehicles +
       '}';
   }
 }
