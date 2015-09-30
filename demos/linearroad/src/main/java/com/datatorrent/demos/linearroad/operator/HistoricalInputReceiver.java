@@ -30,7 +30,7 @@ import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
 public class HistoricalInputReceiver extends AbstractFileInputOperator<TollTuple>
 {
   protected transient BufferedReader br;
-
+  private boolean emit;
   public final transient DefaultOutputPort<TollTuple> tollHistoryTuplePort = new DefaultOutputPort<TollTuple>();
   public final transient DefaultOutputPort<Boolean> readCurrentData = new DefaultOutputPort<>();
 
@@ -59,6 +59,22 @@ public class HistoricalInputReceiver extends AbstractFileInputOperator<TollTuple
     }
     readCurrentData.emit(true);
     return null;
+  }
+
+  @Override
+  public void beginWindow(long windowId)
+  {
+    super.beginWindow(windowId);
+    emit = true;
+  }
+
+  @Override
+  public void emitTuples()
+  {
+    if (emit) {
+      super.emitTuples();
+      emit = false;
+    }
   }
 
   @Override
