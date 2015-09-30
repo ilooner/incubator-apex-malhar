@@ -20,12 +20,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.hadoop.fs.Path;
-
 import com.datatorrent.api.*;
 
 import com.datatorrent.contrib.hdht.AbstractSinglePortHDHTWriter;
-import com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl;
 import com.datatorrent.demos.linearroad.data.AccountBalanceQuery;
 import com.datatorrent.demos.linearroad.data.QueryResult;
 import com.datatorrent.demos.linearroad.data.TollTuple;
@@ -47,7 +44,7 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
   {
     Collection<Partition<AbstractSinglePortHDHTWriter<TollTuple>>> partitions = super.definePartitions(a, a2);
     DefaultPartition.assignPartitionKeys(partitions, accountBalanceQuery);
-    DefaultPartition.assignPartitionKeys(partitions, currentToll);
+    //DefaultPartition.assignPartitionKeys(partitions, currentToll);
     return partitions;
   }
 
@@ -70,6 +67,7 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     put(bucketKey, slice, codec.getValueBytes(a));
   }
 
+  /*
   public transient final DefaultInputPort<TollTuple> currentToll = new DefaultInputPort<TollTuple>()
   {
     @Override
@@ -89,7 +87,7 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     {
       return new AccountBalanceCodec();
     }
-  };
+  }; */
 
   public transient DefaultOutputPort<QueryResult> accountBalanceQueryResult = new DefaultOutputPort<QueryResult>();
 
@@ -127,6 +125,9 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
         if (value != null) {
           TollTuple tuple = codec.fromKeyValue(slice, value);
           accountBalanceQueryResult.emit(new QueryResult(2, 0, accountBalanceQuery.getEventTime(), accountBalanceQuery.getEventTime() + (System.currentTimeMillis() - accountBalanceQuery.getEntryTime()) / 1000, accountBalanceQuery.getQueryId(), tuple.getTolls(), tuple.getEventTime()));
+        }
+        else {
+          accountBalanceQueryResult.emit(new QueryResult(2, 0, accountBalanceQuery.getEventTime(), accountBalanceQuery.getEventTime() + (System.currentTimeMillis() - accountBalanceQuery.getEntryTime()) / 1000, accountBalanceQuery.getQueryId(), 0, accountBalanceQuery.getEventTime()));
         }
       }
     } catch (IOException e) {
