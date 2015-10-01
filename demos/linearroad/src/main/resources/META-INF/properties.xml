@@ -82,7 +82,7 @@
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.HistoricalReceiver.prop.emitBatchSize</name>
-    <value>50000</value>
+    <value>30000</value>
   </property>
 
   <!-- Kafka -->
