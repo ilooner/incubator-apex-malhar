@@ -61,6 +61,7 @@ public class DailyBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     byte[] key = codec.getKeyBytes(a);
     Slice slice = new Slice(key);
     long bucketKey = getBucketKey(a);
+    /*  Since I know that the data is not going to be added
     byte[] value = getUncommitted(bucketKey, slice);
     if (value == null) {
       value = get(bucketKey, slice);
@@ -69,7 +70,7 @@ public class DailyBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     if (value != null) {
       TollTuple temp = codec.fromKeyValue(slice, value);
       a.setTolls(a.getTolls() + temp.getTolls());
-    }
+    } */
     put(bucketKey, slice, codec.getValueBytes(a));
   }
 
