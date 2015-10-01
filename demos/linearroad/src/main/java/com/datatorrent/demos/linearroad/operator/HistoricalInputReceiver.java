@@ -69,15 +69,6 @@ public class HistoricalInputReceiver extends AbstractFileInputOperator<TollTuple
   }
 
   @Override
-  public void emitTuples()
-  {
-    if (emit) {
-      super.emitTuples();
-      emit = false;
-    }
-  }
-
-  @Override
   protected void emit(TollTuple tollTuple)
   {
     tollHistoryTuplePort.emit(tollTuple);
