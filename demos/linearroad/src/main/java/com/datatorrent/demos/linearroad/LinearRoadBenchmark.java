@@ -78,7 +78,7 @@ public class LinearRoadBenchmark implements StreamingApplication
       else {
         dag.setAttribute(accidentNotifier, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
       }
-      dag.setAttribute(tollNotifier, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
+      //dag.setAttribute(tollNotifier, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
     }
 
     HdfsOutputOperator accidentNotifierConsole = dag.addOperator("Accident-Notifier-Console", new HdfsOutputOperator());

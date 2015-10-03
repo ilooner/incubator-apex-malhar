@@ -80,9 +80,6 @@ public class TollNotifier extends BaseOperator
 
   private void processPositionReport(PositionReport tuple)
   {
-    if (Utils.isExitLane(tuple)) {
-      return;
-    }
     partitioningKey.drainKey(tuple);
     int vehicleId = tuple.getVehicleId();
     if (vehicle2SegmentCache.containsKey(vehicleId)) {
@@ -113,8 +110,16 @@ public class TollNotifier extends BaseOperator
       if (vehicleStats.toll > 0) {
         tollCharged.emit(new TollTuple(vehicleId, 0, tuple.getExpressWayId(), vehicleStats.toll, tuple.getEventTime()));
       }
+    }
+    if (Utils.isExitLane(tuple)) {
+      vehicle2SegmentCache.remove(vehicleId);
+      return;
+    }
+
+    if (vehicleStats != null) {
       vehicleStats.key = new PartitioningKey(tuple);
       vehicleStats.eventTime = tuple.getEventTime();
+      vehicleStats.toll = 0;
     }
     else {
       vehicleStats = new Triplet(new PartitioningKey(tuple), 0, 0, tuple.getEventTime());
