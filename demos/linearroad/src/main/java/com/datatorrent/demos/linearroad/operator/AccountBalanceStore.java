@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.datatorrent.api.*;
+import com.datatorrent.api.annotation.InputPortFieldAnnotation;
 
 import com.datatorrent.contrib.hdht.AbstractSinglePortHDHTWriter;
 import com.datatorrent.demos.linearroad.data.AccountBalanceQuery;
@@ -146,6 +147,7 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     }
   };
 
+  @InputPortFieldAnnotation(optional = true)
   public transient final DefaultInputPort<Boolean> finishProcessing = new DefaultInputPort<Boolean>()
   {
     @Override
