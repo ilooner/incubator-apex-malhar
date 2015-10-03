@@ -90,7 +90,7 @@ public class TollNotifier extends BaseOperator
         return;
       }
       //Adding special check to charge the vehicle only if it crosses from one segment into the next one
-      PartitioningKey key = vehicle2SegmentCache.get(vehicleId).key;
+      /*PartitioningKey key = vehicle2SegmentCache.get(vehicleId).key;
       if (key.expressWayId == tuple.getExpressWayId() && key.direction == tuple.getDirection()) {
         if (key.direction == 0) {
           if (key.segment != tuple.getSegment() - 1) {
@@ -105,7 +105,7 @@ public class TollNotifier extends BaseOperator
       }
       else {
         vehicle2SegmentCache.remove(vehicleId);
-      }
+      } */
     }
 
     Triplet vehicleStats = vehicle2SegmentCache.get(vehicleId);
