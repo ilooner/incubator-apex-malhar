@@ -84,6 +84,9 @@ public class TollNotifier extends BaseOperator
     int vehicleId = tuple.getVehicleId();
     if (vehicle2SegmentCache.containsKey(vehicleId)) {
       if (vehicle2SegmentCache.get(vehicleId).key.equals(partitioningKey)) {
+        if(Utils.isExitLane(tuple)){
+          vehicle2SegmentCache.remove(vehicleId);
+        }
         return;
       }
       //Adding special check to charge the vehicle only if it crosses from one segment into the next one
