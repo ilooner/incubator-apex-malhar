@@ -18,6 +18,7 @@ package com.datatorrent.demos.linearroad.operator;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import com.datatorrent.api.*;
@@ -32,6 +33,8 @@ import com.datatorrent.netlet.util.Slice;
 public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
 {
   private transient List<AccountBalanceQuery> queryList = new ArrayList<>();
+  private int currentSecond = -1;
+  private boolean emitAll = false;
 
   @Override
   public void setup(Context.OperatorContext a)
@@ -51,6 +54,10 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
   @Override
   protected void processEvent(TollTuple a) throws IOException
   {
+    if (currentSecond != a.getEventTime()) {
+      processQueryTuples();
+      currentSecond = a.getEventTime();
+    }
     byte[] key = codec.getKeyBytes(a);
     Slice slice = new Slice(key);
     long bucketKey = getBucketKey(a);
@@ -67,6 +74,34 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     put(bucketKey, slice, codec.getValueBytes(a));
   }
 
+  private void processQueryTuples()
+  {
+    try {
+      Iterator<AccountBalanceQuery> itr = queryList.iterator();
+      while (itr.hasNext()) {
+        AccountBalanceQuery accountBalanceQuery = itr.next();
+        if (accountBalanceQuery.getEventTime() > currentSecond) {
+          return;
+        }
+        Slice slice = new Slice(getKeyForQuery(accountBalanceQuery));
+        long bucketKey = getQueryBucket(accountBalanceQuery);
+        byte[] value = getUncommitted(bucketKey, slice);
+        if (value == null) {
+          value = get(bucketKey, slice);
+        }
+        if (value != null) {
+          TollTuple tuple = codec.fromKeyValue(slice, value);
+          accountBalanceQueryResult.emit(new QueryResult(2, 0, accountBalanceQuery.getEventTime(), accountBalanceQuery.getEventTime() + (System.currentTimeMillis() - accountBalanceQuery.getEntryTime()) / 1000, accountBalanceQuery.getQueryId(), tuple.getTolls(), tuple.getEventTime()));
+        }
+        else {
+          accountBalanceQueryResult.emit(new QueryResult(2, 0, accountBalanceQuery.getEventTime(), accountBalanceQuery.getEventTime() + (System.currentTimeMillis() - accountBalanceQuery.getEntryTime()) / 1000, accountBalanceQuery.getQueryId(), 0, accountBalanceQuery.getEventTime()));
+        }
+        itr.remove();
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
   /*
   public transient final DefaultInputPort<TollTuple> currentToll = new DefaultInputPort<TollTuple>()
   {
@@ -111,30 +146,24 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     }
   };
 
+  public transient final DefaultInputPort<Boolean> finishProcessing = new DefaultInputPort<Boolean>()
+  {
+    @Override
+    public void process(Boolean b)
+    {
+      emitAll = b;
+    }
+  };
+
   @Override
   public void endWindow()
   {
-    try {
-      for (AccountBalanceQuery accountBalanceQuery : queryList) {
-        Slice slice = new Slice(getKeyForQuery(accountBalanceQuery));
-        long bucketKey = getQueryBucket(accountBalanceQuery);
-        byte[] value = getUncommitted(bucketKey, slice);
-        if (value == null) {
-          value = get(bucketKey, slice);
-        }
-        if (value != null) {
-          TollTuple tuple = codec.fromKeyValue(slice, value);
-          accountBalanceQueryResult.emit(new QueryResult(2, 0, accountBalanceQuery.getEventTime(), accountBalanceQuery.getEventTime() + (System.currentTimeMillis() - accountBalanceQuery.getEntryTime()) / 1000, accountBalanceQuery.getQueryId(), tuple.getTolls(), tuple.getEventTime()));
-        }
-        else {
-          accountBalanceQueryResult.emit(new QueryResult(2, 0, accountBalanceQuery.getEventTime(), accountBalanceQuery.getEventTime() + (System.currentTimeMillis() - accountBalanceQuery.getEntryTime()) / 1000, accountBalanceQuery.getQueryId(), 0, accountBalanceQuery.getEventTime()));
-        }
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    queryList.clear();
     super.endWindow();
+    if (emitAll) {
+      currentSecond = Integer.MAX_VALUE;
+      processQueryTuples();
+      emitAll = false;
+    }
   }
 
   private static byte[] getKey(int vehicleId) throws IOException

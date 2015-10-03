@@ -57,6 +57,8 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   public final transient DefaultOutputPort<DailyBalanceQuery> dailyBalanceQuery = new DefaultOutputPort<DailyBalanceQuery>();
   public final transient DefaultOutputPort<AccountBalanceQuery> accountBalanceQuery = new DefaultOutputPort<AccountBalanceQuery>();
 
+  public final transient DefaultOutputPort<Boolean> emitAll = new DefaultOutputPort<Boolean>();
+
   public boolean isHistoricalScanFinished()
   {
     return historicalScanFinished;
@@ -109,6 +111,7 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
         return new LinearRoadTuple(4, 1);
       }
     }
+    emitAll.emit(true);
     return null;
   }
 

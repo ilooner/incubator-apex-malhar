@@ -41,6 +41,7 @@ public class LinearRoadBenchmark implements StreamingApplication
     DefaultOutputPort<PositionReport> positionReport;
     DefaultOutputPort<DailyBalanceQuery> dailyBalanceQuery;
     DefaultOutputPort<AccountBalanceQuery> accountBalanceQuery;
+    DefaultOutputPort<Boolean> emitAll = null;
     if (isKafka) {
       KafkaInputOperator receiver = dag.addOperator("KafkaReceiver", new KafkaInputOperator());
       dag.addStream("start-stream-data", historicalInputReceiver.readCurrentData, receiver.startScanning);
@@ -55,6 +56,7 @@ public class LinearRoadBenchmark implements StreamingApplication
       positionReport = receiver.positionReport;
       dailyBalanceQuery = receiver.dailyBalanceQuery;
       accountBalanceQuery = receiver.accountBalanceQuery;
+      emitAll = receiver.emitAll;
     }
 
     AverageSpeedCalculatorV2 averageSpeedCalculator = dag.addOperator("AverageSpeedCalculator", new AverageSpeedCalculatorV2());
@@ -101,5 +103,8 @@ public class LinearRoadBenchmark implements StreamingApplication
     dag.addStream("toll-notifier", tollNotifier.tollNotification, tollNotifierConsole.input);
     dag.addStream("daily-balance-result", dailyBalanceStore.dailyBalanceQueryResult, dailyBalanceConsole.input);
     dag.addStream("account-balance-result", accountBalanceStore.accountBalanceQueryResult, accountBalanceConsole.input);
+    if (!isKafka) {
+      dag.addStream("emit-all", emitAll, accountBalanceStore.finishProcessing);
+    }
   }
 }
