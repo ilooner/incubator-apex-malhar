@@ -49,7 +49,7 @@ public class QueryResult extends LinearRoadTuple
       return false;
     }
 
-    QueryResult that = (QueryResult) o;
+    QueryResult that = (QueryResult)o;
 
     if (exitTime != that.exitTime) {
       return false;
@@ -68,7 +68,7 @@ public class QueryResult extends LinearRoadTuple
   public int hashCode()
   {
     int result = super.hashCode();
-    result = 31 * result + (int) (exitTime ^ (exitTime >>> 32));
+    result = 31 * result + (int)(exitTime ^ (exitTime >>> 32));
     result = 31 * result + queryId;
     result = 31 * result + balance;
     result = 31 * result + resultTime;
@@ -86,8 +86,7 @@ public class QueryResult extends LinearRoadTuple
           "," + resultTime +
           "," + queryId +
           "," + balance;
-    }
-    else {
+    } else {
       return getType() +
         "," + getEventTime() +
         "," + exitTime +

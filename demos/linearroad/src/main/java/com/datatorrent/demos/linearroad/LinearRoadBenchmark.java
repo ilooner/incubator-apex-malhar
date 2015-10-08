@@ -19,13 +19,28 @@ import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 
-import com.datatorrent.api.*;
+import com.datatorrent.api.Context;
+import com.datatorrent.api.DAG;
+import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.Operator;
+import com.datatorrent.api.StatsListener;
+import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
-
 import com.datatorrent.demos.linearroad.data.AccountBalanceQuery;
 import com.datatorrent.demos.linearroad.data.DailyBalanceQuery;
 import com.datatorrent.demos.linearroad.data.PositionReport;
-import com.datatorrent.demos.linearroad.operator.*;
+import com.datatorrent.demos.linearroad.operator.AccidentDetector;
+import com.datatorrent.demos.linearroad.operator.AccidentNotifier;
+import com.datatorrent.demos.linearroad.operator.AccountBalanceStore;
+import com.datatorrent.demos.linearroad.operator.AverageSpeedCalculatorV2;
+import com.datatorrent.demos.linearroad.operator.CustomStatelessPartitioner;
+import com.datatorrent.demos.linearroad.operator.DailyBalanceStore;
+import com.datatorrent.demos.linearroad.operator.HdfsOutputOperator;
+import com.datatorrent.demos.linearroad.operator.HistoricalInputReceiver;
+import com.datatorrent.demos.linearroad.operator.InputReceiver;
+import com.datatorrent.demos.linearroad.operator.KafkaInputOperator;
+import com.datatorrent.demos.linearroad.operator.ThroughPutBasedPartitioner;
+import com.datatorrent.demos.linearroad.operator.TollNotifier;
 
 @ApplicationAnnotation(name = "LinearRoad")
 public class LinearRoadBenchmark implements StreamingApplication
@@ -48,8 +63,7 @@ public class LinearRoadBenchmark implements StreamingApplication
       positionReport = receiver.positionReport;
       dailyBalanceQuery = receiver.dailyBalanceQuery;
       accountBalanceQuery = receiver.accountBalanceQuery;
-    }
-    else {
+    } else {
       InputReceiver receiver = dag.addOperator("Receiver", new InputReceiver());
       receiver.setScanner(new InputReceiver.CustomDirectoryScanner());
       dag.addStream("start-stream-data", historicalInputReceiver.readCurrentData, receiver.startScanning);
@@ -76,8 +90,7 @@ public class LinearRoadBenchmark implements StreamingApplication
         throughPutBasedPartitioner.setCooldownMillis(configuration.getInt("dt.application.linearroad.accidentNotifier.cooldownMillis", 30000));
         dag.setAttribute(accidentNotifier, Context.OperatorContext.PARTITIONER, throughPutBasedPartitioner);
         dag.setAttribute(accidentNotifier, Context.OperatorContext.STATS_LISTENERS, Arrays.asList(new StatsListener[]{throughPutBasedPartitioner}));
-      }
-      else {
+      } else {
         dag.setAttribute(accidentNotifier, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
       }
       //dag.setAttribute(tollNotifier, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));

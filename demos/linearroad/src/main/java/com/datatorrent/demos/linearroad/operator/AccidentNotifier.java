@@ -24,7 +24,6 @@ import com.google.common.collect.Maps;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
-
 import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.demos.linearroad.data.AccidentNotificationTuple;
 import com.datatorrent.demos.linearroad.data.Pair;
@@ -66,8 +65,7 @@ public class AccidentNotifier extends BaseOperator
         return;
       }
       vehicleKey.drainKey(tuple);
-    }
-    else {
+    } else {
       vehicleId2Segment.put(tuple.getVehicleId(), new PartitioningKey(tuple));
     }
 
@@ -76,8 +74,7 @@ public class AccidentNotifier extends BaseOperator
     for (int i = 0; i < 5; i++) {
       if (tuple.getDirection() == 0) {
         partitioningKey.segment = Math.min(eventSegment + i, 99);
-      }
-      else {
+      } else {
         partitioningKey.segment = Math.max(eventSegment - i, 0);
       }
       if (accidentKeySet.containsKey(partitioningKey)) {

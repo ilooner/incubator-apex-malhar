@@ -23,7 +23,6 @@ import java.io.InputStreamReader;
 import org.apache.hadoop.fs.Path;
 
 import com.datatorrent.api.DefaultOutputPort;
-
 import com.datatorrent.demos.linearroad.data.TollTuple;
 import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
 

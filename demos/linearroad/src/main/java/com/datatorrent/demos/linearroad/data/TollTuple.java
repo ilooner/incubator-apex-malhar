@@ -64,7 +64,7 @@ public class TollTuple
       return false;
     }
 
-    TollTuple that = (TollTuple) o;
+    TollTuple that = (TollTuple)o;
 
     if (vehicleId != that.vehicleId) {
       return false;

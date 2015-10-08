@@ -90,7 +90,7 @@ public class CustomStatelessPartitioner<T> implements Partitioner<T>, Serializab
   {
     int parallelPartitionCount = partitioningContext.getParallelPartitionCount();
     int count = (parallelPartitionCount != 0) ? parallelPartitionCount : partitionCount;
-    DefaultPartition<T> partition = (DefaultPartition<T>) collection.iterator().next();
+    DefaultPartition<T> partition = (DefaultPartition<T>)collection.iterator().next();
     List<Partition<T>> newPartitions = new ArrayList<Partition<T>>();
     for (int i = 0; i < count; ++i) {
       DefaultPartition<T> newPartition = new DefaultPartition<T>(partition.getPartitionedInstance());

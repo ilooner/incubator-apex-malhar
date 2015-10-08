@@ -66,7 +66,7 @@ public class PartitioningKey
       return false;
     }
 
-    PartitioningKey that = (PartitioningKey) o;
+    PartitioningKey that = (PartitioningKey)o;
 
     if (expressWayId != that.expressWayId) {
       return false;

@@ -17,19 +17,18 @@ package com.datatorrent.demos.linearroad.operator;
 
 import java.nio.ByteBuffer;
 
-import kafka.message.Message;
-
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.Operator;
-
 import com.datatorrent.contrib.kafka.AbstractKafkaInputOperator;
 import com.datatorrent.contrib.kafka.KafkaConsumer;
 import com.datatorrent.demos.linearroad.data.AccountBalanceQuery;
 import com.datatorrent.demos.linearroad.data.DailyBalanceQuery;
 import com.datatorrent.demos.linearroad.data.PositionReport;
 import com.datatorrent.netlet.util.DTThrowable;
+
+import kafka.message.Message;
 
 public class KafkaInputOperator extends AbstractKafkaInputOperator<KafkaConsumer> implements Operator.IdleTimeHandler
 {
@@ -83,8 +82,7 @@ public class KafkaInputOperator extends AbstractKafkaInputOperator<KafkaConsumer
   {
     if (historicalScanFinished && startScanningData) {
       emitTuples();
-    }
-    else {
+    } else {
       try {
         Thread.sleep(spinMillis);
       } catch (InterruptedException e) {

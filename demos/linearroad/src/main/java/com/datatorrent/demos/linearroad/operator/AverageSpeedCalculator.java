@@ -26,7 +26,6 @@ import com.google.common.collect.Maps;
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
-
 import com.datatorrent.common.util.BaseOperator;
 import com.datatorrent.demos.linearroad.data.AverageSpeedTuple;
 import com.datatorrent.demos.linearroad.data.Pair;
@@ -63,7 +62,7 @@ public class AverageSpeedCalculator extends BaseOperator
         int totalCars = entry.getValue().size();
         double totalSpeed = 0;
         for (Map.Entry<Integer, Pair> pairEntry : entry.getValue().entrySet()) {
-          totalSpeed += ((double) pairEntry.getValue().right / pairEntry.getValue().left);
+          totalSpeed += ((double)pairEntry.getValue().right / pairEntry.getValue().left);
         }
         AverageSpeedTuple averageSpeedTuple = new AverageSpeedTuple(partitioningKey.expressWayId, partitioningKey.direction, partitioningKey.segment, totalCars, totalSpeed, currentMinute, totalCars);
         //logger.info(" average speed tuple {}", averageSpeedTuple);

@@ -71,7 +71,7 @@ public class LinearRoadTuple
       return false;
     }
 
-    LinearRoadTuple that = (LinearRoadTuple) o;
+    LinearRoadTuple that = (LinearRoadTuple)o;
 
     if (type != that.type) {
       return false;
@@ -87,7 +87,7 @@ public class LinearRoadTuple
   public int hashCode()
   {
     int result = type;
-    result = 31 * result + (int) (entryTime ^ (entryTime >>> 32));
+    result = 31 * result + (int)(entryTime ^ (entryTime >>> 32));
     result = 31 * result + eventTime;
     return result;
   }

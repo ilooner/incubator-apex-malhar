@@ -15,18 +15,22 @@
  */
 package com.datatorrent.demos.linearroad.operator;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.hadoop.fs.Path;
-
-import com.datatorrent.api.*;
+import com.datatorrent.api.Context;
+import com.datatorrent.api.DefaultInputPort;
+import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.api.StreamCodec;
 import com.datatorrent.api.annotation.InputPortFieldAnnotation;
-
 import com.datatorrent.contrib.hdht.AbstractSinglePortHDHTWriter;
-import com.datatorrent.contrib.hdht.HDHTFileAccessFSImpl;
 import com.datatorrent.demos.linearroad.data.DailyBalanceQuery;
 import com.datatorrent.demos.linearroad.data.QueryResult;
 import com.datatorrent.demos.linearroad.data.TollTuple;

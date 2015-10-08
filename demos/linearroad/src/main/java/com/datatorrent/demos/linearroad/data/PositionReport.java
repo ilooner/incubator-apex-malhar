@@ -119,7 +119,7 @@ public class PositionReport extends LinearRoadTuple
       return false;
     }
 
-    PositionReport report = (PositionReport) o;
+    PositionReport report = (PositionReport)o;
 
     if (vehicleId != report.vehicleId) {
       return false;

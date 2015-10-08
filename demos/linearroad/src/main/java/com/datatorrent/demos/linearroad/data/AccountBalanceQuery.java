@@ -70,7 +70,7 @@ public class AccountBalanceQuery extends LinearRoadTuple
       return false;
     }
 
-    AccountBalanceQuery that = (AccountBalanceQuery) o;
+    AccountBalanceQuery that = (AccountBalanceQuery)o;
 
     if (vehicleId != that.vehicleId) {
       return false;

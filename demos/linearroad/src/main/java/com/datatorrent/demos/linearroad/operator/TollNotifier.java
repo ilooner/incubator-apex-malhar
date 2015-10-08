@@ -30,9 +30,14 @@ import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.StreamCodec;
-
 import com.datatorrent.common.util.BaseOperator;
-import com.datatorrent.demos.linearroad.data.*;
+import com.datatorrent.demos.linearroad.data.AverageSpeedTuple;
+import com.datatorrent.demos.linearroad.data.Pair;
+import com.datatorrent.demos.linearroad.data.PartitioningKey;
+import com.datatorrent.demos.linearroad.data.PositionReport;
+import com.datatorrent.demos.linearroad.data.TollNotificationTuple;
+import com.datatorrent.demos.linearroad.data.TollTuple;
+import com.datatorrent.demos.linearroad.data.VehicleSpeedPair;
 import com.datatorrent.demos.linearroad.util.Utils;
 import com.datatorrent.lib.codec.KryoSerializableStreamCodec;
 
@@ -84,7 +89,7 @@ public class TollNotifier extends BaseOperator
     int vehicleId = tuple.getVehicleId();
     if (vehicle2SegmentCache.containsKey(vehicleId)) {
       if (vehicle2SegmentCache.get(vehicleId).key.equals(partitioningKey)) {
-        if(Utils.isExitLane(tuple)){
+        if (Utils.isExitLane(tuple)) {
           vehicle2SegmentCache.remove(vehicleId);
         }
         return;
@@ -123,8 +128,7 @@ public class TollNotifier extends BaseOperator
       vehicleStats.key = new PartitioningKey(tuple);
       vehicleStats.eventTime = tuple.getEventTime();
       vehicleStats.toll = 0;
-    }
-    else {
+    } else {
       vehicleStats = new Triplet(new PartitioningKey(tuple), 0, 0, tuple.getEventTime());
       vehicle2SegmentCache.put(vehicleId, vehicleStats);
     }
@@ -155,9 +159,8 @@ public class TollNotifier extends BaseOperator
       //toll and speed calculation
       int toll = 0;
       if (totalVehicles > 0) {
-        averageSpeed = (int) Math.round(totalSpeed / totalVehicles);
-      }
-      else {
+        averageSpeed = (int)Math.round(totalSpeed / totalVehicles);
+      } else {
         averageSpeed = 0;
       }
 
@@ -302,7 +305,7 @@ public class TollNotifier extends BaseOperator
         return false;
       }
 
-      TollNotifierKey tollNotifierKey = (TollNotifierKey) o;
+      TollNotifierKey tollNotifierKey = (TollNotifierKey)o;
 
       if (expressWayId != tollNotifierKey.expressWayId) {
         return false;

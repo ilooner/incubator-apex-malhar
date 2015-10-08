@@ -15,15 +15,22 @@
  */
 package com.datatorrent.demos.linearroad.operator;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import com.datatorrent.api.*;
+import com.datatorrent.api.Context;
+import com.datatorrent.api.DefaultInputPort;
+import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.api.StreamCodec;
 import com.datatorrent.api.annotation.InputPortFieldAnnotation;
-
 import com.datatorrent.contrib.hdht.AbstractSinglePortHDHTWriter;
 import com.datatorrent.demos.linearroad.data.AccountBalanceQuery;
 import com.datatorrent.demos.linearroad.data.QueryResult;
@@ -93,8 +100,7 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
         if (value != null) {
           TollTuple tuple = codec.fromKeyValue(slice, value);
           accountBalanceQueryResult.emit(new QueryResult(2, 0, accountBalanceQuery.getEventTime(), accountBalanceQuery.getEventTime() + (System.currentTimeMillis() - accountBalanceQuery.getEntryTime()) / 1000, accountBalanceQuery.getQueryId(), tuple.getTolls(), tuple.getEventTime()));
-        }
-        else {
+        } else {
           accountBalanceQueryResult.emit(new QueryResult(2, 0, accountBalanceQuery.getEventTime(), accountBalanceQuery.getEventTime() + (System.currentTimeMillis() - accountBalanceQuery.getEntryTime()) / 1000, accountBalanceQuery.getQueryId(), 0, accountBalanceQuery.getEventTime()));
         }
         itr.remove();

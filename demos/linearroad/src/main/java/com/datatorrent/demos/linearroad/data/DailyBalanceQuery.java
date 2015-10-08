@@ -70,7 +70,7 @@ public class DailyBalanceQuery extends AccountBalanceQuery
       return false;
     }
 
-    DailyBalanceQuery that = (DailyBalanceQuery) o;
+    DailyBalanceQuery that = (DailyBalanceQuery)o;
 
     if (expressWayId != that.expressWayId) {
       return false;

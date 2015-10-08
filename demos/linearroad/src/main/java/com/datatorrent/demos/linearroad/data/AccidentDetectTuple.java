@@ -58,7 +58,7 @@ public class AccidentDetectTuple
       return false;
     }
 
-    AccidentDetectTuple that = (AccidentDetectTuple) o;
+    AccidentDetectTuple that = (AccidentDetectTuple)o;
 
     if (eventTime != that.eventTime) {
       return false;

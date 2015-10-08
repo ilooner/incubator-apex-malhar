@@ -30,7 +30,6 @@ import com.google.common.collect.Sets;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.Operator;
-
 import com.datatorrent.demos.linearroad.data.AccountBalanceQuery;
 import com.datatorrent.demos.linearroad.data.DailyBalanceQuery;
 import com.datatorrent.demos.linearroad.data.LinearRoadTuple;
@@ -119,13 +118,11 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   protected void emit(LinearRoadTuple tuple)
   {
     if (tuple instanceof PositionReport) {
-      positionReport.emit((PositionReport) tuple);
-    }
-    else if (tuple instanceof DailyBalanceQuery) {
-      dailyBalanceQuery.emit((DailyBalanceQuery) tuple);
-    }
-    else if (tuple instanceof AccountBalanceQuery) {
-      accountBalanceQuery.emit((AccountBalanceQuery) tuple);
+      positionReport.emit((PositionReport)tuple);
+    } else if (tuple instanceof DailyBalanceQuery) {
+      dailyBalanceQuery.emit((DailyBalanceQuery)tuple);
+    } else if (tuple instanceof AccountBalanceQuery) {
+      accountBalanceQuery.emit((AccountBalanceQuery)tuple);
     }
   }
 
@@ -143,7 +140,7 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   {
     super.endWindow();
     if (scanner instanceof CustomDirectoryScanner) {
-      ((CustomDirectoryScanner) scanner).setStartScan(historicalScanFinished && startScanningData);
+      ((CustomDirectoryScanner)scanner).setStartScan(historicalScanFinished && startScanningData);
     }
   }
 

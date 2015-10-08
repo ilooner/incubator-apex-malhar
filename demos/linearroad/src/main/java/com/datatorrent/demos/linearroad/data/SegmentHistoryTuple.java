@@ -53,7 +53,7 @@ public class SegmentHistoryTuple
       return false;
     }
 
-    SegmentHistoryTuple that = (SegmentHistoryTuple) o;
+    SegmentHistoryTuple that = (SegmentHistoryTuple)o;
 
     if (day != that.day) {
       return false;

@@ -18,7 +18,11 @@ package com.datatorrent.demos.linearroad.operator;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.validation.constraints.Min;
 
@@ -30,7 +34,6 @@ import com.google.common.collect.Maps;
 
 import com.datatorrent.api.Partitioner;
 import com.datatorrent.api.StatsListener;
-
 import com.datatorrent.demos.linearroad.data.Pair;
 import com.datatorrent.demos.linearroad.data.PartitioningKey;
 
@@ -102,8 +105,7 @@ public class ThroughPutBasedPartitioner implements StatsListener, Partitioner<Ac
         totalThroughput += entry.getValue();
       }
       throughPutPerOperator.clear();
-    }
-    else {
+    } else {
       return response;
     }
 
@@ -113,13 +115,11 @@ public class ThroughPutBasedPartitioner implements StatsListener, Partitioner<Ac
         response.repartitionRequired = true;
         partitionCount = totalThroughput > 0 ? maxPartitionCount : minPartitionCount;
         logger.debug("setting repartition to true");
-      }
-      else if (!repartition) {
+      } else if (!repartition) {
         repartition = true;
         nextMillis = System.currentTimeMillis() + cooldownMillis;
       }
-    }
-    else {
+    } else {
       repartition = false;
     }
     return response;
@@ -136,8 +136,7 @@ public class ThroughPutBasedPartitioner implements StatsListener, Partitioner<Ac
       // delegate to create initial list of partitions
       partitionCount = initialPartitionCount;
       return new CustomStatelessPartitioner<AccidentNotifier>(partitionCount).definePartitions(partitions, context);
-    }
-    else {
+    } else {
       // repartition call                                                                                                                                    `
       logger.debug("repartition call for operator");
       if (System.currentTimeMillis() < partitionNextMillis) {
