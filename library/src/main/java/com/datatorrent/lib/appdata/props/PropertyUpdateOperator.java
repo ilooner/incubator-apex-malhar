@@ -18,14 +18,13 @@ package com.datatorrent.lib.appdata.props;
 
 import com.datatorrent.api.Context.OperatorContext;
 import com.datatorrent.api.DefaultOutputPort;
-import com.datatorrent.api.Operator;
+import com.datatorrent.api.InputOperator;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-public class PropertyUpdateOperator implements Operator
+public class PropertyUpdateOperator implements InputOperator
 {
   public static final String FIELD_PROPERTY_NAME = "name";
   public static final String FIELD_PROPERTY_VALUE = "value";
@@ -33,6 +32,7 @@ public class PropertyUpdateOperator implements Operator
   public final transient DefaultOutputPort<PropertyUpdate> propertyUpdate = new DefaultOutputPort<>();
 
   private String updateProperty;
+  private Queue<PropertyUpdate> queue = new LinkedBlockingQueue<>();
 
   public PropertyUpdateOperator()
   {
@@ -46,6 +46,14 @@ public class PropertyUpdateOperator implements Operator
   @Override
   public void beginWindow(long windowId)
   {
+  }
+
+  @Override
+  public void emitTuples()
+  {
+    while(!queue.isEmpty()) {
+      propertyUpdate.emit(queue.poll());
+    }
   }
 
   @Override
@@ -76,7 +84,7 @@ public class PropertyUpdateOperator implements Operator
       String name = jo.getString(FIELD_PROPERTY_NAME);
       String value = jo.getString(FIELD_PROPERTY_VALUE);
 
-      propertyUpdate.emit(new PropertyUpdate(name, value));
+      queue.add(new PropertyUpdate(name, value));
     } catch (JSONException ex) {
       throw new RuntimeException(ex);
     }
