@@ -79,9 +79,10 @@ public class LinearRoadBenchmark implements StreamingApplication
     AccountBalanceStore accountBalanceStore = dag.addOperator("AccountBalanceStore", new AccountBalanceStore());
     DailyBalanceStore dailyBalanceStore = dag.addOperator("DailyBalanceStore", new DailyBalanceStore());
     //setting partitions
+
     if (enablePartitioning) {
       dag.setAttribute(accidentDetector, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
-      //dag.setAttribute(averageSpeedCalculator, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
+      dag.setAttribute(averageSpeedCalculator, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
       if (dynamicPartitioning) {
         ThroughPutBasedPartitioner throughPutBasedPartitioner = new ThroughPutBasedPartitioner(1);
         throughPutBasedPartitioner.setMinPartitionCount(configuration.getInt("dt.application.linearroad.accidentNotifier.minPartitions", 1));
@@ -100,8 +101,7 @@ public class LinearRoadBenchmark implements StreamingApplication
     HdfsOutputOperator dailyBalanceConsole = dag.addOperator("Daily-Balance-Console", new HdfsOutputOperator());
     HdfsOutputOperator accountBalanceConsole = dag.addOperator("Account-Balance-Console", new HdfsOutputOperator());
 
-    dag.addStream("position-report", positionReport, accidentDetector.positionReport, averageSpeedCalculator.positionReport, accidentNotifier.positionReport, tollNotifier.positionReport).setLocality(DAG.Locality.CONTAINER_LOCAL);
-    //dag.addStream("average-speed-position-report", receiver.avSpeedPositionReport, averageSpeedCalculator.positionReport).setLocality(DAG.Locality.CONTAINER_LOCAL);
+    dag.addStream("position-report", positionReport, accidentDetector.positionReport, averageSpeedCalculator.positionReport, accidentNotifier.positionReport, tollNotifier.positionReport);
     dag.addStream("current-toll-balance", tollNotifier.tollCharged, accountBalanceStore.input);
 
     dag.addStream("historical-toll-balance", historicalInputReceiver.tollHistoryTuplePort, dailyBalanceStore.input);

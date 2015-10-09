@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -162,7 +163,7 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   public Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> definePartitions(Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> partitions, PartitioningContext context)
   {
     try {
-      FileSystem fileSystem = FileSystem.newInstance(filePath.toUri(), configuration);
+      FileSystem fileSystem = FileSystem.newInstance(filePath.toUri(), new Configuration());
       FileStatus[] fileStatus = fileSystem.listStatus(filePath);
       Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> newPartitions = Lists.newArrayListWithExpectedSize(fileStatus.length);
       Kryo kryo = new Kryo();

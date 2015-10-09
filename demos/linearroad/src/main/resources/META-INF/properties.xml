@@ -18,7 +18,7 @@
   </property>
   <property>
     <name>dt.application.linearroad.enablePartitioning</name>
-    <value>true</value>
+    <value>false</value>
   </property>
   <property>
     <name>dt.application.linearroad.dynamicPartitioning</name>
@@ -147,4 +147,11 @@
     <name>dt.application.LinearRoad.operator.Account-Balance-Console.prop.rotationWindows</name>
     <value>300</value>
   </property>
+
+  <property>
+    <name>dt.application.LinearRoad.stream.position-report.locality</name>
+    <value>CONATINER_LOCAL</value>
+  </property>
+
+
 </configuration>
