@@ -150,7 +150,7 @@
 
   <property>
     <name>dt.application.LinearRoad.stream.position-report.locality</name>
-    <value>CONATINER_LOCAL</value>
+    <value>CONTAINER_LOCAL</value>
   </property>
 
 

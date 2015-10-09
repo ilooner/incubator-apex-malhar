@@ -163,8 +163,9 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   public Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> definePartitions(Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> partitions, PartitioningContext context)
   {
     try {
-      FileSystem fileSystem = FileSystem.newInstance(filePath.toUri(), new Configuration());
-      FileStatus[] fileStatus = fileSystem.listStatus(filePath);
+      Path dir = new Path(directory);
+      FileSystem fileSystem = FileSystem.newInstance(dir.toUri(), new Configuration());
+      FileStatus[] fileStatus = fileSystem.listStatus(dir);
       Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> newPartitions = Lists.newArrayListWithExpectedSize(fileStatus.length);
       Kryo kryo = new Kryo();
       // Kryo.copy fails as it attempts to clone transient fields
