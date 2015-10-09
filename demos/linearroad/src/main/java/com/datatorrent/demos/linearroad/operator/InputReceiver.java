@@ -51,6 +51,17 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   private boolean historicalScanFinished;
   private boolean startScanningData = false;
   private String fileToScan;
+  private String delimiter = ",";
+
+  public String getDelimiter()
+  {
+    return delimiter;
+  }
+
+  public void setDelimiter(String delimiter)
+  {
+    this.delimiter = delimiter;
+  }
 
   public boolean isStartScanningData()
   {
@@ -105,7 +116,7 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   {
     String line = br.readLine();
     if (line != null) {
-      String[] splits = line.split(",");
+      String[] splits = line.split(delimiter);
       int type = Integer.parseInt(splits[0]);
       if (type == 0) {
         return new PositionReport(Integer.parseInt(splits[1]), Integer.parseInt(splits[2]), Integer.parseInt(splits[3]),
