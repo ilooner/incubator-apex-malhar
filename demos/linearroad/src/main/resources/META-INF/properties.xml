@@ -148,10 +148,4 @@
     <value>300</value>
   </property>
 
-  <property>
-    <name>dt.application.LinearRoad.stream.position-report.locality</name>
-    <value>CONTAINER_LOCAL</value>
-  </property>
-
-
 </configuration>

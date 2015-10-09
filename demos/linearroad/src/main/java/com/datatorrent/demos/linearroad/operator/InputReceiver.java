@@ -189,6 +189,12 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
     }
   }
 
+  @Override
+  public Response processStats(BatchedOperatorStats batchedOperatorStats)
+  {
+    return new Response();
+  }
+
   public static class CustomDirectoryScanner extends DirectoryScanner
   {
     private static final long serialVersionUID = 201508070221L;
