@@ -16,19 +16,27 @@
 package com.datatorrent.demos.linearroad.operator;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
+import com.datatorrent.api.DefaultPartition;
 import com.datatorrent.api.Operator;
 import com.datatorrent.demos.linearroad.data.AccountBalanceQuery;
 import com.datatorrent.demos.linearroad.data.DailyBalanceQuery;
@@ -41,6 +49,7 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   protected transient BufferedReader br;
   private boolean historicalScanFinished;
   private boolean startScanningData = false;
+  private String fileToScan;
 
   public boolean isStartScanningData()
   {
@@ -73,6 +82,7 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   {
     InputStream is = super.openFile(path);
     br = new BufferedReader(new InputStreamReader(is));
+    br.readLine(); // to ignore header
     return is;
   }
 
@@ -139,8 +149,41 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   public void endWindow()
   {
     super.endWindow();
-    if (scanner instanceof CustomDirectoryScanner) {
-      ((CustomDirectoryScanner)scanner).setStartScan(historicalScanFinished && startScanningData);
+    if (fileToScan != null && historicalScanFinished && startScanningData) {
+      pendingFiles.add(fileToScan);
+      fileToScan = null;
+    }
+//    if (scanner instanceof CustomDirectoryScanner) {
+//      ((CustomDirectoryScanner)scanner).setStartScan(historicalScanFinished && startScanningData);
+//    }
+  }
+
+  @Override
+  public Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> definePartitions(Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> partitions, PartitioningContext context)
+  {
+    try {
+      FileSystem fileSystem = FileSystem.newInstance(filePath.toUri(), configuration);
+      FileStatus[] fileStatus = fileSystem.listStatus(filePath);
+      Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> newPartitions = Lists.newArrayListWithExpectedSize(fileStatus.length);
+      Kryo kryo = new Kryo();
+      // Kryo.copy fails as it attempts to clone transient fields
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      Output loutput = new Output(bos);
+      kryo.writeObject(loutput, this);
+      loutput.close();
+
+      for (FileStatus fileStatus1 : fileStatus) {
+        Input lInput = new Input(bos.toByteArray());
+        @SuppressWarnings("unchecked")
+        InputReceiver oper = kryo.readObject(lInput, this.getClass());
+        lInput.close();
+        oper.setScanner(new CustomDirectoryScanner());
+        oper.fileToScan = fileStatus1.getPath().toString();
+        newPartitions.add(new DefaultPartition<AbstractFileInputOperator<LinearRoadTuple>>(oper));
+      }
+      return newPartitions;
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -167,10 +210,7 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
     @Override
     public LinkedHashSet<Path> scan(FileSystem fs, Path filePath, Set<String> consumedFiles)
     {
-      if (!isStartScan()) {
-        return Sets.newLinkedHashSet();
-      }
-      return super.scan(fs, filePath, consumedFiles);
+      return Sets.newLinkedHashSet();
     }
   }
 }

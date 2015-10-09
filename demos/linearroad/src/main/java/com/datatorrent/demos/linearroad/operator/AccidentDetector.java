@@ -54,8 +54,8 @@ public class AccidentDetector extends BaseOperator
     public void process(PositionReport positionReport)
     {
       if (!Utils.isTravelLane(positionReport)) {
-        clearAccident(positionReport, vehicleIdPosition.get(positionReport.getVehicleId()));
-        vehicleIdPosition.remove(positionReport.getVehicleId());
+        clearAccident(positionReport, vehicleIdPosition.remove(positionReport.getVehicleId()));
+        //vehicleIdPosition.remove(positionReport.getVehicleId());
         return;
       }
 

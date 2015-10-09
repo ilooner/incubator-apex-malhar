@@ -38,7 +38,6 @@ import com.datatorrent.demos.linearroad.operator.DailyBalanceStore;
 import com.datatorrent.demos.linearroad.operator.HdfsOutputOperator;
 import com.datatorrent.demos.linearroad.operator.HistoricalInputReceiver;
 import com.datatorrent.demos.linearroad.operator.InputReceiver;
-import com.datatorrent.demos.linearroad.operator.KafkaInputOperator;
 import com.datatorrent.demos.linearroad.operator.ThroughPutBasedPartitioner;
 import com.datatorrent.demos.linearroad.operator.TollNotifier;
 
@@ -56,22 +55,22 @@ public class LinearRoadBenchmark implements StreamingApplication
     DefaultOutputPort<PositionReport> positionReport;
     DefaultOutputPort<DailyBalanceQuery> dailyBalanceQuery;
     DefaultOutputPort<AccountBalanceQuery> accountBalanceQuery;
-    DefaultOutputPort<Boolean> emitAll = null;
-    if (isKafka) {
+    DefaultOutputPort<Boolean> emitAll;
+    /*if (isKafka) {
       KafkaInputOperator receiver = dag.addOperator("KafkaReceiver", new KafkaInputOperator());
       dag.addStream("start-stream-data", historicalInputReceiver.readCurrentData, receiver.startScanning);
       positionReport = receiver.positionReport;
       dailyBalanceQuery = receiver.dailyBalanceQuery;
       accountBalanceQuery = receiver.accountBalanceQuery;
-    } else {
-      InputReceiver receiver = dag.addOperator("Receiver", new InputReceiver());
-      receiver.setScanner(new InputReceiver.CustomDirectoryScanner());
-      dag.addStream("start-stream-data", historicalInputReceiver.readCurrentData, receiver.startScanning);
-      positionReport = receiver.positionReport;
-      dailyBalanceQuery = receiver.dailyBalanceQuery;
-      accountBalanceQuery = receiver.accountBalanceQuery;
-      emitAll = receiver.emitAll;
-    }
+    } else { */
+    InputReceiver receiver = dag.addOperator("Receiver", new InputReceiver());
+    receiver.setScanner(new InputReceiver.CustomDirectoryScanner());
+    dag.addStream("start-stream-data", historicalInputReceiver.readCurrentData, receiver.startScanning);
+    positionReport = receiver.positionReport;
+    dailyBalanceQuery = receiver.dailyBalanceQuery;
+    accountBalanceQuery = receiver.accountBalanceQuery;
+    emitAll = receiver.emitAll;
+    //}
 
     AverageSpeedCalculatorV2 averageSpeedCalculator = dag.addOperator("AverageSpeedCalculator", new AverageSpeedCalculatorV2());
     TollNotifier tollNotifier = dag.addOperator("TollNotifier", new TollNotifier());
@@ -82,7 +81,7 @@ public class LinearRoadBenchmark implements StreamingApplication
     //setting partitions
     if (enablePartitioning) {
       dag.setAttribute(accidentDetector, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
-      dag.setAttribute(averageSpeedCalculator, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
+      //dag.setAttribute(averageSpeedCalculator, Context.OperatorContext.PARTITIONER, new CustomStatelessPartitioner<Operator>(numberOfExpressWays * 2));
       if (dynamicPartitioning) {
         ThroughPutBasedPartitioner throughPutBasedPartitioner = new ThroughPutBasedPartitioner(1);
         throughPutBasedPartitioner.setMinPartitionCount(configuration.getInt("dt.application.linearroad.accidentNotifier.minPartitions", 1));
@@ -101,7 +100,8 @@ public class LinearRoadBenchmark implements StreamingApplication
     HdfsOutputOperator dailyBalanceConsole = dag.addOperator("Daily-Balance-Console", new HdfsOutputOperator());
     HdfsOutputOperator accountBalanceConsole = dag.addOperator("Account-Balance-Console", new HdfsOutputOperator());
 
-    dag.addStream("position-report", positionReport, accidentDetector.positionReport, averageSpeedCalculator.positionReport, accidentNotifier.positionReport, tollNotifier.positionReport);
+    dag.addStream("position-report", positionReport, accidentDetector.positionReport, averageSpeedCalculator.positionReport, accidentNotifier.positionReport, tollNotifier.positionReport).setLocality(DAG.Locality.CONTAINER_LOCAL);
+    //dag.addStream("average-speed-position-report", receiver.avSpeedPositionReport, averageSpeedCalculator.positionReport).setLocality(DAG.Locality.CONTAINER_LOCAL);
     dag.addStream("current-toll-balance", tollNotifier.tollCharged, accountBalanceStore.input);
 
     dag.addStream("historical-toll-balance", historicalInputReceiver.tollHistoryTuplePort, dailyBalanceStore.input);
