@@ -21,9 +21,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
+import javax.validation.constraints.NotNull;
+
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,25 +37,70 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
+import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultInputPort;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.api.InputOperator;
 import com.datatorrent.api.Operator;
+import com.datatorrent.api.Partitioner;
 import com.datatorrent.demos.linearroad.data.AccountBalanceQuery;
 import com.datatorrent.demos.linearroad.data.DailyBalanceQuery;
 import com.datatorrent.demos.linearroad.data.LinearRoadTuple;
 import com.datatorrent.demos.linearroad.data.PositionReport;
-import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
 
-public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> implements Operator.IdleTimeHandler
+public class InputReceiver implements InputOperator, Partitioner<InputReceiver>, Operator.IdleTimeHandler
 {
-  protected transient BufferedReader br;
+  private transient FileSystem fs;
+  private transient Path filePath;
+  private transient BufferedReader br;
+  private transient MutableInt offset;
+  private transient MutableInt skipOffset;
+  private transient LinearRoadTuple linearRoadTuple;
   private boolean historicalScanFinished;
   private boolean startScanningData = false;
-  private String fileToScan;
+  private transient List<BufferedReader> bufferedReaders;
+  private List<String> filesToScan;
+  @NotNull
   private String delimiter = ",";
+  @NotNull
+  private String directory;
+  private int numberOfPartitions = Integer.MAX_VALUE;
+  private int emitBatchSize = 1000;
+  private List<MutableInt> offsets = Lists.newArrayList();
+  private transient List<MutableInt> skipOffsets = Lists.newArrayList();
+  private boolean emit;
+
+  public int getEmitBatchSize()
+  {
+    return emitBatchSize;
+  }
+
+  public void setEmitBatchSize(int emitBatchSize)
+  {
+    this.emitBatchSize = emitBatchSize;
+  }
+
+  public int getNumberOfPartitions()
+  {
+    return numberOfPartitions;
+  }
+
+  public void setNumberOfPartitions(int numberOfPartitions)
+  {
+    this.numberOfPartitions = numberOfPartitions;
+  }
+
+  public String getDirectory()
+  {
+    return directory;
+  }
+
+  public void setDirectory(String directory)
+  {
+    this.directory = directory;
+  }
 
   public String getDelimiter()
   {
@@ -89,29 +138,73 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
     this.historicalScanFinished = historicalScanFinished;
   }
 
-  @Override
-  protected InputStream openFile(Path path) throws IOException
+  protected void openFile(Path path)
   {
-    InputStream is = super.openFile(path);
-    br = new BufferedReader(new InputStreamReader(is));
-    br.readLine(); // to ignore header
-    return is;
+    try {
+      InputStream is = fs.open(path);
+      br = new BufferedReader(new InputStreamReader(is));
+      bufferedReaders.add(br);
+      br.readLine(); // to ignore header
+    } catch (IOException ex) {
+      throw new RuntimeException(ex);
+    }
+
   }
 
-  @Override
-  protected void closeFile(InputStream is) throws IOException
+  protected void closeFile(BufferedReader bufferedReader) throws IOException
   {
-    super.closeFile(is);
-    br = null;
+    bufferedReader.close();
   }
 
   @Override
   public void handleIdleTime()
   {
-    emitTuples();
+    if (emit) {
+      emitTuples();
+      emit = false;
+    }
   }
 
   @Override
+  public void emitTuples()
+  {
+    Iterator<BufferedReader> bufferedReaderIterator = bufferedReaders.iterator();
+    Iterator<MutableInt> offsetIterator = offsets.iterator();
+    Iterator<MutableInt> skipIterator = skipOffsets.iterator();
+    Iterator<String> fileIterator = filesToScan.iterator();
+
+    while (bufferedReaderIterator.hasNext()) {
+      br = bufferedReaderIterator.next();
+      offset = offsetIterator.next();
+      skipOffset = skipIterator.next();
+      fileIterator.next();
+      int localBatchSize = 0;
+      try {
+        while (localBatchSize < emitBatchSize) {
+          linearRoadTuple = readEntity();
+          if (linearRoadTuple == null) {
+            closeFile(br);
+            bufferedReaderIterator.remove();
+            offsetIterator.remove();
+            skipIterator.remove();
+            fileIterator.remove();
+            break;
+          }
+          if (skipOffset.intValue() > 0) {
+            skipOffset.decrement();
+          } else {
+            offset.increment();
+            emit(linearRoadTuple);
+          }
+          localBatchSize++;
+        }
+      } catch (IOException ex) {
+        throw new RuntimeException(ex);
+      }
+
+    }
+  }
+
   protected LinearRoadTuple readEntity() throws IOException
   {
     String line = br.readLine();
@@ -132,11 +225,9 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
         return new LinearRoadTuple(4, 1);
       }
     }
-    emitAll.emit(true);
     return null;
   }
 
-  @Override
   protected void emit(LinearRoadTuple tuple)
   {
     if (tuple instanceof PositionReport) {
@@ -160,24 +251,38 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   @Override
   public void endWindow()
   {
-    super.endWindow();
-    if (fileToScan != null && historicalScanFinished && startScanningData) {
-      pendingFiles.add(fileToScan);
-      fileToScan = null;
+    readFiles();
+  }
+
+  private void readFiles()
+  {
+    if (filesToScan != null && !filesToScan.isEmpty() && historicalScanFinished && startScanningData && bufferedReaders.isEmpty()) {
+      for (String file : filesToScan) {
+        openFile(new Path(file));
+      }
+      if (!offsets.isEmpty()) {
+        assert filesToScan.size() == offsets.size() : "Offset size can't be different than files to scan";
+        for (MutableInt offset : offsets) {
+          skipOffsets.add(new MutableInt(offset.intValue()));
+        }
+      } else {
+        for (String file : filesToScan) {
+          offsets.add(new MutableInt(0));
+          skipOffsets.add(new MutableInt(0));
+        }
+      }
     }
-//    if (scanner instanceof CustomDirectoryScanner) {
-//      ((CustomDirectoryScanner)scanner).setStartScan(historicalScanFinished && startScanningData);
-//    }
   }
 
   @Override
-  public Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> definePartitions(Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> partitions, PartitioningContext context)
+  public Collection<Partition<InputReceiver>> definePartitions(Collection<Partition<InputReceiver>> partitions, PartitioningContext context)
   {
     try {
       Path dir = new Path(directory);
       FileSystem fileSystem = FileSystem.newInstance(dir.toUri(), new Configuration());
       FileStatus[] fileStatus = fileSystem.listStatus(dir);
-      Collection<Partition<AbstractFileInputOperator<LinearRoadTuple>>> newPartitions = Lists.newArrayListWithExpectedSize(fileStatus.length);
+      int totalPartitions = Math.min(fileStatus.length, numberOfPartitions);
+      List<Partition<InputReceiver>> newPartitions = Lists.newArrayListWithExpectedSize(totalPartitions);
       Kryo kryo = new Kryo();
       // Kryo.copy fails as it attempts to clone transient fields
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -185,14 +290,18 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
       kryo.writeObject(loutput, this);
       loutput.close();
 
-      for (FileStatus fileStatus1 : fileStatus) {
+      for (int i = 0; i < totalPartitions; i++) {
         Input lInput = new Input(bos.toByteArray());
         @SuppressWarnings("unchecked")
         InputReceiver oper = kryo.readObject(lInput, this.getClass());
         lInput.close();
-        oper.setScanner(new CustomDirectoryScanner());
-        oper.fileToScan = fileStatus1.getPath().toString();
-        newPartitions.add(new DefaultPartition<AbstractFileInputOperator<LinearRoadTuple>>(oper));
+        oper.filesToScan = Lists.newArrayList();
+        newPartitions.add(new DefaultPartition<InputReceiver>(oper));
+      }
+      int i = 0;
+      for (FileStatus fileStatus1 : fileStatus) {
+        newPartitions.get(i % totalPartitions).getPartitionedInstance().filesToScan.add(fileStatus1.getPath().toString());
+        i++;
       }
       return newPartitions;
     } catch (IOException e) {
@@ -201,35 +310,39 @@ public class InputReceiver extends AbstractFileInputOperator<LinearRoadTuple> im
   }
 
   @Override
-  public Response processStats(BatchedOperatorStats batchedOperatorStats)
+  public void beginWindow(long l)
   {
-    return new Response();
+    emit = true;
   }
 
-  public static class CustomDirectoryScanner extends DirectoryScanner
+  @Override
+  public void setup(Context.OperatorContext context)
   {
-    private static final long serialVersionUID = 201508070221L;
-    private boolean startScan;
-
-    public CustomDirectoryScanner()
-    {
-      this.startScan = false;
+    try {
+      filePath = new Path(directory);
+      fs = FileSystem.newInstance(filePath.toUri(), new Configuration());
+    } catch (IOException ex) {
+      throw new RuntimeException(ex);
     }
+    readFiles();
+  }
 
-    public boolean isStartScan()
-    {
-      return startScan;
+  @Override
+  public void teardown()
+  {
+    try {
+      fs.close();
+      for (BufferedReader bufferedReader : bufferedReaders) {
+        bufferedReader.close();
+      }
+    } catch (IOException ex) {
+      throw new RuntimeException(ex);
     }
+  }
 
-    public void setStartScan(boolean startScan)
-    {
-      this.startScan = startScan;
-    }
+  @Override
+  public void partitioned(Map<Integer, Partition<InputReceiver>> map)
+  {
 
-    @Override
-    public LinkedHashSet<Path> scan(FileSystem fs, Path filePath, Set<String> consumedFiles)
-    {
-      return Sets.newLinkedHashSet();
-    }
   }
 }

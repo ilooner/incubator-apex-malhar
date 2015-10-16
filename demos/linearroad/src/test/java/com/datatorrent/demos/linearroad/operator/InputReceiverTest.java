@@ -82,8 +82,8 @@ public class InputReceiverTest
     }
 
     InputReceiver oper = new InputReceiver();
-    oper.setScanIntervalMillis(0);
-    oper.setScanner(new InputReceiver.CustomDirectoryScanner());
+//    oper.setScanIntervalMillis(0);
+//    oper.setScanner(new InputReceiver.CustomDirectoryScanner());
 
     CollectorTestSink<Object> sink = new CollectorTestSink<>();
     oper.positionReport.setSink(sink);

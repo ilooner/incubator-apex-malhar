@@ -64,7 +64,7 @@ public class LinearRoadBenchmark implements StreamingApplication
       accountBalanceQuery = receiver.accountBalanceQuery;
     } else { */
     InputReceiver receiver = dag.addOperator("Receiver", new InputReceiver());
-    receiver.setScanner(new InputReceiver.CustomDirectoryScanner());
+    //receiver.setScanner(new InputReceiver.CustomDirectoryScanner());
     dag.addStream("start-stream-data", historicalInputReceiver.readCurrentData, receiver.startScanning);
     positionReport = receiver.positionReport;
     dailyBalanceQuery = receiver.dailyBalanceQuery;
