@@ -71,6 +71,17 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   private List<MutableInt> offsets = Lists.newArrayList();
   private transient List<MutableInt> skipOffsets = Lists.newArrayList();
   private boolean emit;
+  private boolean ignoreHeader = false;
+
+  public boolean isIgnoreHeader()
+  {
+    return ignoreHeader;
+  }
+
+  public void setIgnoreHeader(boolean ignoreHeader)
+  {
+    this.ignoreHeader = ignoreHeader;
+  }
 
   public int getEmitBatchSize()
   {
@@ -144,7 +155,9 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
       InputStream is = fs.open(path);
       br = new BufferedReader(new InputStreamReader(is));
       bufferedReaders.add(br);
-      br.readLine(); // to ignore header
+      if(ignoreHeader) {
+        br.readLine(); // to ignore header
+      }
     } catch (IOException ex) {
       throw new RuntimeException(ex);
     }
