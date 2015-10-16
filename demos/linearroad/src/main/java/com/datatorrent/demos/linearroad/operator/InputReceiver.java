@@ -165,7 +165,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   @Override
   public void emitTuples()
   {
-    if (!emit) {
+    if (!emit || bufferedReaders == null || bufferedReaders.isEmpty()) {
       return;
     }
     emit = false;
@@ -325,6 +325,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
     } catch (IOException ex) {
       throw new RuntimeException(ex);
     }
+    bufferedReaders = Lists.newArrayList();
     readFiles();
   }
 

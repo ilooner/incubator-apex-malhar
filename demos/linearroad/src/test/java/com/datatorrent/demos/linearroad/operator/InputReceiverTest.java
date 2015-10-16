@@ -15,23 +15,24 @@
  */
 package com.datatorrent.demos.linearroad.operator;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashSet;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
-import com.google.common.collect.Sets;
+import org.apache.commons.io.FileUtils;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
 
 import com.datatorrent.api.Attribute;
 import com.datatorrent.api.Context;
-
 import com.datatorrent.lib.helper.OperatorContextTestHelper;
 import com.datatorrent.lib.testbench.CollectorTestSink;
 
@@ -71,24 +72,15 @@ public class InputReceiverTest
   @Test
   public void test() throws Exception
   {
-    HashSet<String> allLines = Sets.newHashSet();
-    for (int file = 0; file < 2; file++) {
-      HashSet<String> lines = Sets.newHashSet();
-      for (int line = 0; line < 2; line++) {
-        lines.add("0,1,1,2,2,2,22,2,2,2,2," + line);
-      }
-      allLines.addAll(lines);
-      FileUtils.write(new File(testMeta.dir, "file" + file), StringUtils.join(lines, '\n'));
-    }
-
     InputReceiver oper = new InputReceiver();
-//    oper.setScanIntervalMillis(0);
-//    oper.setScanner(new InputReceiver.CustomDirectoryScanner());
+    oper.setDirectory("file://" + new File("src/test/resources/input").getAbsolutePath());
+    oper.setNumberOfPartitions(1);
+    oper.setEmitBatchSize(1);
+    oper = oper.definePartitions(null, null).iterator().next().getPartitionedInstance();
+    oper.setStartScanningData(true);
 
     CollectorTestSink<Object> sink = new CollectorTestSink<>();
     oper.positionReport.setSink(sink);
-
-    oper.setDirectory(testMeta.dir);
     oper.setup(testMeta.context);
     long wid;
     for (wid = 0; wid < 3; wid++) {
@@ -96,15 +88,59 @@ public class InputReceiverTest
       oper.handleIdleTime();
       oper.endWindow();
     }
+    oper.setHistoricalScanFinished(true);
+    oper.beginWindow(wid++);
+    oper.endWindow();
     oper.beginWindow(wid);
-    oper.startScanning.process(true);
-    oper.endWindow();
-    oper.beginWindow(++wid);
-    oper.handleIdleTime();
-    oper.handleIdleTime();
     oper.handleIdleTime();
     oper.endWindow();
-    Assert.assertTrue("Total tuples emitted is 4", 4 == sink.collectedTuples.size());
+    Assert.assertTrue("Total tuples emitted is 2", 2 == sink.collectedTuples.size());
+    sink.collectedTuples.clear();
+    Kryo kryo = new Kryo();
+    // Kryo.copy fails as it attempts to clone transient fields
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    Output loutput = new Output(bos);
+    kryo.writeObject(loutput, oper);
+    loutput.close();
+    Input lInput = new Input(bos.toByteArray());
+    @SuppressWarnings("unchecked")
+    InputReceiver oper1 = kryo.readObject(lInput, InputReceiver.class);
+    lInput.close();
+    oper.teardown();
+    oper1.positionReport.setSink(sink);
+    oper1.setup(testMeta.context);
+    wid = 0;
+    oper1.beginWindow(wid);
+    oper1.handleIdleTime();
+    oper1.endWindow();
+    Assert.assertTrue("Total tuples emitted is 0", 0 == sink.collectedTuples.size());
+    for (int i = 1; i < 4; i++) {
+      ++wid;
+      oper1.beginWindow(wid);
+      oper1.handleIdleTime();
+      oper1.endWindow();
+    }
+    Assert.assertTrue("Total tuples emitted is 5", 5 == sink.collectedTuples.size());
+    sink.collectedTuples.clear();
+
+    bos = new ByteArrayOutputStream();
+    loutput = new Output(bos);
+    kryo.writeObject(loutput, oper1);
+    loutput.close();
+    lInput = new Input(bos.toByteArray());
+    oper = kryo.readObject(lInput, InputReceiver.class);
+    lInput.close();
+    oper1.teardown();
+    oper.positionReport.setSink(sink);
+    oper.setup(testMeta.context);
+    wid = 0;
+    for (int i = 1; i < 10; i++) {
+      ++wid;
+      oper.beginWindow(wid);
+      oper.handleIdleTime();
+      oper.endWindow();
+    }
+    Assert.assertTrue("Total tuples emitted is 2 and collected " + sink.collectedTuples.size(), 2 == sink.collectedTuples.size());
     oper.teardown();
   }
 }
