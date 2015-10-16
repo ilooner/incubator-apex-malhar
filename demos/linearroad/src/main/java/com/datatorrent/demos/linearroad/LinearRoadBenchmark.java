@@ -50,7 +50,6 @@ public class LinearRoadBenchmark implements StreamingApplication
     int numberOfExpressWays = configuration.getInt("dt.application.linearroad.numberOfExpressWays", 1);
     boolean enablePartitioning = configuration.getBoolean("dt.application.linearroad.enablePartitioning", true);
     boolean dynamicPartitioning = configuration.getBoolean("dt.application.linearroad.dynamicPartitioning", false);
-    boolean isKafka = configuration.getBoolean("dt.application.linearroad.kafka", true);
     HistoricalInputReceiver historicalInputReceiver = dag.addOperator("HistoricalReceiver", new HistoricalInputReceiver());
     DefaultOutputPort<PositionReport> positionReport;
     DefaultOutputPort<DailyBalanceQuery> dailyBalanceQuery;
@@ -116,8 +115,6 @@ public class LinearRoadBenchmark implements StreamingApplication
     dag.addStream("toll-notifier", tollNotifier.tollNotification, tollNotifierConsole.input);
     dag.addStream("daily-balance-result", dailyBalanceStore.dailyBalanceQueryResult, dailyBalanceConsole.input);
     dag.addStream("account-balance-result", accountBalanceStore.accountBalanceQueryResult, accountBalanceConsole.input);
-    if (!isKafka) {
-      dag.addStream("emit-all", emitAll, accountBalanceStore.finishProcessing);
-    }
+    dag.addStream("emit-all", emitAll, accountBalanceStore.finishProcessing);
   }
 }

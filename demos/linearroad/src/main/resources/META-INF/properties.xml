@@ -24,10 +24,7 @@
     <name>dt.application.linearroad.dynamicPartitioning</name>
     <value>false</value>
   </property>
-  <property>
-    <name>dt.application.linearroad.kafka</name>
-    <value>true</value>
-  </property>
+
   <property>
     <name>dt.application.linearroad.accidentNotifier.minPartitions</name>
     <value>1</value>
@@ -88,31 +85,6 @@
     <name>dt.application.LinearRoad.operator.HistoricalReceiver.prop.emitBatchSize</name>
     <value>2000</value>
   </property>
-
-  <!-- Kafka -->
-  <property>
-    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.consumer.topic</name>
-    <value></value>
-  </property>
-  <property>
-    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.consumer.clientId</name>
-    <value>linearroad_poc_client</value>
-  </property>
-  <property>
-    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.initialOffset</name>
-    <value>latest</value>
-  </property>
-  <property>
-    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.zookeeper</name>
-    <value></value>
-  </property>
-
-  <!-- disable repartitioning -->
-  <property>
-    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.repartitionInterval</name>
-    <value>-1</value>
-  </property>
-
 
   <!-- Output Operators-->
   <property>
