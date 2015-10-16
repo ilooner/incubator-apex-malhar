@@ -159,15 +159,16 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   @Override
   public void handleIdleTime()
   {
-    if (emit) {
-      emitTuples();
-      emit = false;
-    }
+    emitTuples();
   }
 
   @Override
   public void emitTuples()
   {
+    if (!emit) {
+      return;
+    }
+    emit = false;
     Iterator<BufferedReader> bufferedReaderIterator = bufferedReaders.iterator();
     Iterator<MutableInt> offsetIterator = offsets.iterator();
     Iterator<MutableInt> skipIterator = skipOffsets.iterator();
