@@ -25,13 +25,25 @@ import org.apache.hadoop.fs.Path;
 import com.datatorrent.api.DefaultOutputPort;
 import com.datatorrent.demos.linearroad.data.TollTuple;
 import com.datatorrent.lib.io.fs.AbstractFileInputOperator;
+import com.datatorrent.netlet.util.DTThrowable;
 
 public class HistoricalInputReceiver extends AbstractFileInputOperator<TollTuple>
 {
   protected transient BufferedReader br;
-  private boolean emit;
   public final transient DefaultOutputPort<TollTuple> tollHistoryTuplePort = new DefaultOutputPort<TollTuple>();
   public final transient DefaultOutputPort<Boolean> readCurrentData = new DefaultOutputPort<>();
+
+  private long sleepMillis = 50;
+
+  public long getSleepMillis()
+  {
+    return sleepMillis;
+  }
+
+  public void setSleepMillis(long sleepMillis)
+  {
+    this.sleepMillis = sleepMillis;
+  }
 
   @Override
   protected InputStream openFile(Path path) throws IOException
@@ -64,7 +76,13 @@ public class HistoricalInputReceiver extends AbstractFileInputOperator<TollTuple
   public void beginWindow(long windowId)
   {
     super.beginWindow(windowId);
-    emit = true;
+    if (sleepMillis > 0) {
+      try {
+        Thread.sleep(sleepMillis);
+      } catch (InterruptedException e) {
+        DTThrowable.rethrow(e);
+      }
+    }
   }
 
   @Override

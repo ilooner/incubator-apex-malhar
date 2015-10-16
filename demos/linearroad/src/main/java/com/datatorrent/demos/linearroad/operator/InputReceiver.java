@@ -295,8 +295,8 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
       Path dir = new Path(directory);
       FileSystem fileSystem = FileSystem.newInstance(dir.toUri(), new Configuration());
       FileStatus[] fileStatus = fileSystem.listStatus(dir);
-      int totalPartitions = Math.min(fileStatus.length, numberOfPartitions);
-      List<Partition<InputReceiver>> newPartitions = Lists.newArrayListWithExpectedSize(totalPartitions);
+      numberOfPartitions = Math.min(fileStatus.length, numberOfPartitions);
+      List<Partition<InputReceiver>> newPartitions = Lists.newArrayListWithExpectedSize(numberOfPartitions);
       Kryo kryo = new Kryo();
       // Kryo.copy fails as it attempts to clone transient fields
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -304,7 +304,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
       kryo.writeObject(loutput, this);
       loutput.close();
 
-      for (int i = 0; i < totalPartitions; i++) {
+      for (int i = 0; i < numberOfPartitions; i++) {
         Input lInput = new Input(bos.toByteArray());
         @SuppressWarnings("unchecked")
         InputReceiver oper = kryo.readObject(lInput, this.getClass());
@@ -314,7 +314,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
       }
       int i = 0;
       for (FileStatus fileStatus1 : fileStatus) {
-        newPartitions.get(i % totalPartitions).getPartitionedInstance().filesToScan.add(fileStatus1.getPath().toString());
+        newPartitions.get(i % numberOfPartitions).getPartitionedInstance().filesToScan.add(fileStatus1.getPath().toString());
         i++;
       }
       return newPartitions;
