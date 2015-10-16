@@ -39,7 +39,7 @@ public class AverageSpeedCalculatorTest
     protected void starting(Description description)
     {
       averageSpeed = new CollectorTestSink<Object>();
-      operator = new AverageSpeedCalculator();
+      operator = new AverageSpeedCalculatorV2();
       operator.setup(null);
       operator.averageSpeed.setSink(averageSpeed);
     }
@@ -68,7 +68,7 @@ public class AverageSpeedCalculatorTest
       }
     }
     testMeta.operator.endWindow();
-    Assert.assertEquals("number of tuples ", 4, testMeta.averageSpeed.collectedTuples.size());
+    Assert.assertEquals("number of tuples ", 3, testMeta.averageSpeed.collectedTuples.size());
   }
 
 }

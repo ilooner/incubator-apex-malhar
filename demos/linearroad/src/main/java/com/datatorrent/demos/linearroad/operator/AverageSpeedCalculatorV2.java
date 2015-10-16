@@ -18,6 +18,8 @@ package com.datatorrent.demos.linearroad.operator;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.lang3.mutable.MutableInt;
+
 import com.google.common.collect.Maps;
 
 import com.datatorrent.demos.linearroad.data.AverageSpeedTuple;
@@ -31,33 +33,42 @@ public class AverageSpeedCalculatorV2 extends AverageSpeedCalculator
   @Override
   protected void processTuple(PositionReport positionReport)
   {
-    if (currentMinute != positionReport.getMinute()) {
-      for (Map.Entry<PartitioningKey, HashMap<Integer, Pair>> entry : cache.entrySet()) {
-        PartitioningKey partitioningKey = entry.getKey();
-        int uniqueCars = entry.getValue().size();
-        int totalCars = 0;
-        double totalSpeed = 0;
-        for (Map.Entry<Integer, Pair> pairEntry : entry.getValue().entrySet()) {
-          totalSpeed += pairEntry.getValue().right;
-          totalCars += pairEntry.getValue().left;
+    xwayDirPartitionKey.drainKey(positionReport);
+    currentMin = xwayDirPartitionKeyMutableIntHashMap.get(xwayDirPartitionKey);
+    if (currentMin != null && currentMin.intValue() != positionReport.getMinute()) {
+      if (cache.containsKey(xwayDirPartitionKey)) {
+        for (Map.Entry<PartitioningKey, HashMap<Integer, Pair>> entry : cache.remove(xwayDirPartitionKey).entrySet()) {
+          PartitioningKey partitioningKey = entry.getKey();
+          int uniqueCars = entry.getValue().size();
+          int totalCars = 0;
+          double totalSpeed = 0;
+          for (Map.Entry<Integer, Pair> pairEntry : entry.getValue().entrySet()) {
+            totalSpeed += pairEntry.getValue().right;
+            totalCars += pairEntry.getValue().left;
+          }
+          AverageSpeedTuple averageSpeedTuple = new AverageSpeedTuple(partitioningKey.expressWayId, partitioningKey.direction, partitioningKey.segment, totalCars, totalSpeed, currentMin.intValue(), uniqueCars);
+          //logger.info(" average speed tuple {}", averageSpeedTuple);
+          averageSpeed.emit(averageSpeedTuple);
         }
-        AverageSpeedTuple averageSpeedTuple = new AverageSpeedTuple(partitioningKey.expressWayId, partitioningKey.direction, partitioningKey.segment, totalCars, totalSpeed, currentMinute, uniqueCars);
-        //logger.info(" average speed tuple {}", averageSpeedTuple);
-        averageSpeed.emit(averageSpeedTuple);
       }
-      currentMinute = positionReport.getMinute();
-      cache.clear();
+      currentMin.setValue(positionReport.getMinute());
+    }
+    if (currentMin == null) {
+      xwayDirPartitionKeyMutableIntHashMap.put(xwayDirPartitionKey, currentMin = new MutableInt(-1));
+      currentMin.setValue(positionReport.getMinute());
     }
     partitioningKey.drainKey(positionReport);
-    HashMap<Integer, Pair> averageSpeedPerCar = cache.get(partitioningKey);
+    HashMap<PartitioningKey, HashMap<Integer, Pair>> xwayDirCache = cache.get(xwayDirPartitionKey);
+    if (xwayDirCache == null) {
+      cache.put(xwayDirPartitionKey, xwayDirCache = Maps.newHashMap());
+    }
+    HashMap<Integer, Pair> averageSpeedPerCar = xwayDirCache.get(partitioningKey);
     if (averageSpeedPerCar == null) {
-      averageSpeedPerCar = Maps.newHashMap();
-      cache.put(new PartitioningKey(positionReport), averageSpeedPerCar);
+      xwayDirCache.put(new PartitioningKey(positionReport), averageSpeedPerCar = Maps.newHashMap());
     }
     Pair pair = averageSpeedPerCar.get(positionReport.getVehicleId());
     if (pair == null) {
-      pair = new Pair();
-      averageSpeedPerCar.put(positionReport.getVehicleId(), pair);
+      averageSpeedPerCar.put(positionReport.getVehicleId(), pair = new Pair());
     }
     pair.left++;
     pair.right += positionReport.getVehicleSpeed();

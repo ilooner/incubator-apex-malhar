@@ -21,6 +21,8 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.mutable.MutableInt;
+
 import com.google.common.collect.Maps;
 
 import com.datatorrent.api.Context;
@@ -31,13 +33,16 @@ import com.datatorrent.demos.linearroad.data.AverageSpeedTuple;
 import com.datatorrent.demos.linearroad.data.Pair;
 import com.datatorrent.demos.linearroad.data.PartitioningKey;
 import com.datatorrent.demos.linearroad.data.PositionReport;
+import com.datatorrent.demos.linearroad.data.XwayDirPartitionKey;
 import com.datatorrent.lib.codec.KryoSerializableStreamCodec;
 
 public class AverageSpeedCalculator extends BaseOperator
 {
-  protected int currentMinute = -1;
-  protected HashMap<PartitioningKey, HashMap<Integer, Pair>> cache = Maps.newHashMap();
+  protected HashMap<XwayDirPartitionKey, MutableInt> xwayDirPartitionKeyMutableIntHashMap = Maps.newHashMap();
+  protected HashMap<XwayDirPartitionKey, HashMap<PartitioningKey, HashMap<Integer, Pair>>> cache = Maps.newHashMap();
   protected transient PartitioningKey partitioningKey;
+  protected transient XwayDirPartitionKey xwayDirPartitionKey;
+  protected transient MutableInt currentMin;
   public final transient DefaultOutputPort<AverageSpeedTuple> averageSpeed = new DefaultOutputPort<AverageSpeedTuple>();
   public final transient DefaultInputPort<PositionReport> positionReport = new DefaultInputPort<PositionReport>()
   {
@@ -56,31 +61,41 @@ public class AverageSpeedCalculator extends BaseOperator
 
   protected void processTuple(PositionReport positionReport)
   {
-    if (currentMinute != positionReport.getMinute()) {
-      for (Map.Entry<PartitioningKey, HashMap<Integer, Pair>> entry : cache.entrySet()) {
-        PartitioningKey partitioningKey = entry.getKey();
-        int totalCars = entry.getValue().size();
-        double totalSpeed = 0;
-        for (Map.Entry<Integer, Pair> pairEntry : entry.getValue().entrySet()) {
-          totalSpeed += ((double)pairEntry.getValue().right / pairEntry.getValue().left);
+    xwayDirPartitionKey.drainKey(positionReport);
+    currentMin = xwayDirPartitionKeyMutableIntHashMap.get(xwayDirPartitionKey);
+    if (currentMin != null && currentMin.intValue() != positionReport.getMinute()) {
+      if (cache.containsKey(xwayDirPartitionKey)) {
+        for (Map.Entry<PartitioningKey, HashMap<Integer, Pair>> entry : cache.remove(xwayDirPartitionKey).entrySet()) {
+          PartitioningKey partitioningKey = entry.getKey();
+          int totalCars = entry.getValue().size();
+          double totalSpeed = 0;
+          for (Map.Entry<Integer, Pair> pairEntry : entry.getValue().entrySet()) {
+            totalSpeed += ((double)pairEntry.getValue().right / pairEntry.getValue().left);
+          }
+          AverageSpeedTuple averageSpeedTuple = new AverageSpeedTuple(partitioningKey.expressWayId, partitioningKey.direction, partitioningKey.segment, totalCars, totalSpeed, currentMin.intValue(), totalCars);
+          //logger.info(" average speed tuple {}", averageSpeedTuple);
+          averageSpeed.emit(averageSpeedTuple);
         }
-        AverageSpeedTuple averageSpeedTuple = new AverageSpeedTuple(partitioningKey.expressWayId, partitioningKey.direction, partitioningKey.segment, totalCars, totalSpeed, currentMinute, totalCars);
-        //logger.info(" average speed tuple {}", averageSpeedTuple);
-        averageSpeed.emit(averageSpeedTuple);
       }
-      currentMinute = positionReport.getMinute();
-      cache.clear();
+      currentMin.setValue(positionReport.getMinute());
+    }
+
+    if (currentMin == null) {
+      xwayDirPartitionKeyMutableIntHashMap.put(xwayDirPartitionKey, currentMin = new MutableInt(-1));
+      currentMin.setValue(positionReport.getMinute());
     }
     partitioningKey.drainKey(positionReport);
-    HashMap<Integer, Pair> averageSpeedPerCar = cache.get(partitioningKey);
+    HashMap<PartitioningKey, HashMap<Integer, Pair>> xwayDirCache = cache.get(xwayDirPartitionKey);
+    if (xwayDirCache == null) {
+      cache.put(new XwayDirPartitionKey(positionReport), xwayDirCache = Maps.newHashMap());
+    }
+    HashMap<Integer, Pair> averageSpeedPerCar = xwayDirCache.get(partitioningKey);
     if (averageSpeedPerCar == null) {
-      averageSpeedPerCar = Maps.newHashMap();
-      cache.put(new PartitioningKey(positionReport), averageSpeedPerCar);
+      xwayDirCache.put(new PartitioningKey(positionReport), averageSpeedPerCar = Maps.newHashMap());
     }
     Pair pair = averageSpeedPerCar.get(positionReport.getVehicleId());
     if (pair == null) {
-      pair = new Pair();
-      averageSpeedPerCar.put(positionReport.getVehicleId(), pair);
+      averageSpeedPerCar.put(positionReport.getVehicleId(), pair = new Pair());
     }
     pair.left++;
     pair.right += positionReport.getVehicleSpeed();
@@ -90,6 +105,7 @@ public class AverageSpeedCalculator extends BaseOperator
   public void setup(Context.OperatorContext context)
   {
     partitioningKey = new PartitioningKey(-1, 0, 0);
+    xwayDirPartitionKey = new XwayDirPartitionKey(-1, 0);
   }
 
   public static class AverageSpeedCodec extends KryoSerializableStreamCodec<PositionReport>
