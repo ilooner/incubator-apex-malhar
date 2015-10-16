@@ -71,6 +71,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   private List<MutableInt> offsets = Lists.newArrayList();
   private transient List<MutableInt> skipOffsets = Lists.newArrayList();
   private boolean emit;
+  private boolean emitAllBool = false;
   private boolean ignoreHeader = false;
 
   public boolean isIgnoreHeader()
@@ -155,7 +156,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
       InputStream is = fs.open(path);
       br = new BufferedReader(new InputStreamReader(is));
       bufferedReaders.add(br);
-      if(ignoreHeader) {
+      if (ignoreHeader) {
         br.readLine(); // to ignore header
       }
     } catch (IOException ex) {
@@ -266,6 +267,10 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   public void endWindow()
   {
     readFiles();
+    if (filesToScan.isEmpty() && !emitAllBool) {
+      emitAll.emit(true);
+      emitAllBool = true;
+    }
   }
 
   private void readFiles()
