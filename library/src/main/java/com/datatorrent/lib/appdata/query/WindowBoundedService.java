@@ -57,6 +57,7 @@ public class WindowBoundedService implements Component<OperatorContext>
    */
   private final Runnable runnable;
   protected transient ExecutorService executorThread;
+  private transient volatile boolean terminated = false;
 
   private final transient Semaphore mutex = new Semaphore(0);
 
@@ -99,6 +100,7 @@ public class WindowBoundedService implements Component<OperatorContext>
   @Override
   public void teardown()
   {
+    terminated = true;
     executorThread.shutdownNow();
   }
 
@@ -138,6 +140,10 @@ public class WindowBoundedService implements Component<OperatorContext>
           mutex.acquireUninterruptibly();
           runnable.run();
           mutex.release();
+
+          if(terminated) {
+            return;
+          }
         } else {
           Thread.sleep(executeIntervalMillis - diff);
         }
