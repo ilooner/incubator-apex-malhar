@@ -124,7 +124,9 @@ public class WindowBoundedService implements Component<OperatorContext>
       } catch (Exception e) {
         LOG.error("Exception thrown while processing:", e);
         mutex.release();
-        mainThread.interrupt();
+        if (!terminated) {
+          mainThread.interrupt();
+        }
       }
 
       return null;
