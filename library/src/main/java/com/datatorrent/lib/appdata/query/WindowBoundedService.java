@@ -100,6 +100,7 @@ public class WindowBoundedService implements Component<OperatorContext>
   @Override
   public void teardown()
   {
+    LOG.info("Terminated");
     terminated = true;
     executorThread.shutdownNow();
   }
