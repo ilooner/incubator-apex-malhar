@@ -108,7 +108,7 @@ public class PubSubWebSocketAppDataQuery extends PubSubWebSocketInputOperator<St
     if (windowBoundedService != null) {
       windowBoundedService.teardown();
     }
-
+    
     super.teardown();
   }
 
