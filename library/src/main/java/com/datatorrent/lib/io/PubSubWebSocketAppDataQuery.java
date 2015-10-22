@@ -105,11 +105,11 @@ public class PubSubWebSocketAppDataQuery extends PubSubWebSocketInputOperator<St
   @Override
   public void teardown()
   {
+    super.teardown();
+
     if (windowBoundedService != null) {
       windowBoundedService.teardown();
     }
-
-    super.teardown();
   }
 
   public static URI uriHelper(OperatorContext context, URI uri)
