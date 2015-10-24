@@ -45,10 +45,6 @@
     <value>4096</value>
   </property>
   <property>
-    <name>dt.application.LinearRoad.operator.Receiver.prop.emitBatchSize</name>
-    <value>2000</value>
-  </property>
-  <property>
     <name>dt.application.LinearRoad.operator.HistoricalReceiver.prop.emitBatchSize</name>
     <value>2000</value>
   </property>

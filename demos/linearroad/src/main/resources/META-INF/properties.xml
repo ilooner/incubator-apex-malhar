@@ -74,11 +74,7 @@
     <value>4096</value>
   </property>
   <property>
-    <name>dt.application.LinearRoad.operator.Receiver.prop.emitBatchSize</name>
-    <value>2000</value>
-  </property>
-  <property>
-    <name>dt.application.LinearRoad.operator.Receiver.prop.startScanningData</name>
+    <name>dt.application.LinearRoad.operator.InitiateStreamData.prop.startScanningData</name>
     <value>true</value>
   </property>
   <property>

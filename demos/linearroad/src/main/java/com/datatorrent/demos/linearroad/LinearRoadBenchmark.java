@@ -38,6 +38,7 @@ import com.datatorrent.demos.linearroad.operator.DailyBalanceStore;
 import com.datatorrent.demos.linearroad.operator.HdfsOutputOperator;
 import com.datatorrent.demos.linearroad.operator.HistoricalInputReceiver;
 import com.datatorrent.demos.linearroad.operator.InputReceiver;
+import com.datatorrent.demos.linearroad.operator.InputSynchronizer;
 import com.datatorrent.demos.linearroad.operator.ThroughPutBasedPartitioner;
 import com.datatorrent.demos.linearroad.operator.TollNotifier;
 
@@ -62,9 +63,12 @@ public class LinearRoadBenchmark implements StreamingApplication
       dailyBalanceQuery = receiver.dailyBalanceQuery;
       accountBalanceQuery = receiver.accountBalanceQuery;
     } else { */
+    InputSynchronizer inputSynchronizer = dag.addOperator("InitiateStreamData", InputSynchronizer.class);
     InputReceiver receiver = dag.addOperator("Receiver", new InputReceiver());
     //receiver.setScanner(new InputReceiver.CustomDirectoryScanner());
-    dag.addStream("start-stream-data", historicalInputReceiver.readCurrentData, receiver.startScanning);
+    dag.addStream("start-stream-data", historicalInputReceiver.readCurrentData, inputSynchronizer.startScanning);
+    dag.addStream("dummy-stream", inputSynchronizer.dummyPort, receiver.dummyPort);
+    dag.addStream("stream-data", inputSynchronizer.nextEventTime, receiver.nextEventTime);
     positionReport = receiver.positionReport;
     dailyBalanceQuery = receiver.dailyBalanceQuery;
     accountBalanceQuery = receiver.accountBalanceQuery;

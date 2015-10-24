@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DefaultInputPort;
@@ -45,6 +47,7 @@ import com.datatorrent.api.DefaultPartition;
 import com.datatorrent.api.InputOperator;
 import com.datatorrent.api.Operator;
 import com.datatorrent.api.Partitioner;
+import com.datatorrent.api.annotation.InputPortFieldAnnotation;
 import com.datatorrent.demos.linearroad.data.AccountBalanceQuery;
 import com.datatorrent.demos.linearroad.data.DailyBalanceQuery;
 import com.datatorrent.demos.linearroad.data.LinearRoadTuple;
@@ -58,8 +61,6 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   private transient MutableInt offset;
   private transient MutableInt skipOffset;
   private transient LinearRoadTuple linearRoadTuple;
-  private boolean historicalScanFinished;
-  private boolean startScanningData = false;
   private transient List<BufferedReader> bufferedReaders;
   private List<String> filesToScan;
   @NotNull
@@ -67,12 +68,13 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   @NotNull
   private String directory;
   private int numberOfPartitions = Integer.MAX_VALUE;
-  private int emitBatchSize = 1000;
   private List<MutableInt> offsets = Lists.newArrayList();
   private transient List<MutableInt> skipOffsets = Lists.newArrayList();
-  private boolean emit;
+  private transient HashMap<String, LinearRoadTuple> nextSecTuple = Maps.newHashMap();
   private boolean emitAllBool = false;
   private boolean ignoreHeader = false;
+  private transient int currentSec = 0;
+  private int nextSec = 0;
 
   public boolean isIgnoreHeader()
   {
@@ -82,16 +84,6 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   public void setIgnoreHeader(boolean ignoreHeader)
   {
     this.ignoreHeader = ignoreHeader;
-  }
-
-  public int getEmitBatchSize()
-  {
-    return emitBatchSize;
-  }
-
-  public void setEmitBatchSize(int emitBatchSize)
-  {
-    this.emitBatchSize = emitBatchSize;
   }
 
   public int getNumberOfPartitions()
@@ -124,31 +116,28 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
     this.delimiter = delimiter;
   }
 
-  public boolean isStartScanningData()
+  public List<String> getFilesToScan()
   {
-    return startScanningData;
+    return filesToScan;
   }
 
-  public void setStartScanningData(boolean startScanningData)
+  public void setFilesToScan(List<String> filesToScan)
   {
-    this.startScanningData = startScanningData;
+    this.filesToScan = filesToScan;
   }
 
+  public final transient DefaultInputPort<Integer> dummyPort = new DefaultInputPort<Integer>()
+  {
+    @Override
+    public void process(Integer integer)
+    {
+    }
+  };
   public final transient DefaultOutputPort<PositionReport> positionReport = new DefaultOutputPort<PositionReport>();
   public final transient DefaultOutputPort<DailyBalanceQuery> dailyBalanceQuery = new DefaultOutputPort<DailyBalanceQuery>();
   public final transient DefaultOutputPort<AccountBalanceQuery> accountBalanceQuery = new DefaultOutputPort<AccountBalanceQuery>();
 
   public final transient DefaultOutputPort<Boolean> emitAll = new DefaultOutputPort<Boolean>();
-
-  public boolean isHistoricalScanFinished()
-  {
-    return historicalScanFinished;
-  }
-
-  public void setHistoricalScanFinished(boolean historicalScanFinished)
-  {
-    this.historicalScanFinished = historicalScanFinished;
-  }
 
   protected void openFile(Path path)
   {
@@ -179,10 +168,10 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   @Override
   public void emitTuples()
   {
-    if (!emit || bufferedReaders == null || bufferedReaders.isEmpty()) {
+    if (currentSec >= nextSec || bufferedReaders == null || bufferedReaders.isEmpty()) {
       return;
     }
-    emit = false;
+
     Iterator<BufferedReader> bufferedReaderIterator = bufferedReaders.iterator();
     Iterator<MutableInt> offsetIterator = offsets.iterator();
     Iterator<MutableInt> skipIterator = skipOffsets.iterator();
@@ -192,10 +181,22 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
       br = bufferedReaderIterator.next();
       offset = offsetIterator.next();
       skipOffset = skipIterator.next();
-      fileIterator.next();
-      int localBatchSize = 0;
+      String file = fileIterator.next();
       try {
-        while (localBatchSize < emitBatchSize) {
+        if (nextSecTuple.get(file) != null) {
+          linearRoadTuple = nextSecTuple.get(file);
+          if (currentSec < linearRoadTuple.getEventTime()) {
+            continue;
+          }
+          nextSecTuple.remove(file);
+          if (skipOffset.intValue() > 0) {
+            skipOffset.decrement();
+          } else {
+            offset.increment();
+            emit(linearRoadTuple);
+          }
+        }
+        while (true) {
           linearRoadTuple = readEntity();
           if (linearRoadTuple == null) {
             closeFile(br);
@@ -204,6 +205,11 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
             skipIterator.remove();
             fileIterator.remove();
             break;
+          } else {
+            if (currentSec < linearRoadTuple.getEventTime()) {
+              nextSecTuple.put(file, linearRoadTuple);
+              break;
+            }
           }
           if (skipOffset.intValue() > 0) {
             skipOffset.decrement();
@@ -211,13 +217,12 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
             offset.increment();
             emit(linearRoadTuple);
           }
-          localBatchSize++;
         }
       } catch (IOException ex) {
         throw new RuntimeException(ex);
       }
-
     }
+    currentSec++;
   }
 
   protected LinearRoadTuple readEntity() throws IOException
@@ -237,7 +242,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
         return new DailyBalanceQuery(Integer.parseInt(splits[1]), Integer.parseInt(splits[2]), Integer.parseInt(splits[9]), Integer.parseInt(splits[4]), Integer.parseInt(splits[14]));
       }
       if (type == 4) {
-        return new LinearRoadTuple(4, 1);
+        return new LinearRoadTuple(4, 0);
       }
     }
     return null;
@@ -254,28 +259,31 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
     }
   }
 
-  public final transient DefaultInputPort<Boolean> startScanning = new DefaultInputPort<Boolean>()
+  public final transient DefaultInputPort<Integer> nextEventTime = new DefaultInputPort<Integer>()
   {
     @Override
-    public void process(Boolean aBoolean)
+    public void process(Integer nextSecond)
     {
-      historicalScanFinished = aBoolean;
+      System.out.println(nextSecond);
+      if (filesToScan != null && !filesToScan.isEmpty()) {
+        nextSec += nextSecond;
+      }
     }
   };
 
   @Override
   public void endWindow()
   {
-    readFiles();
+    //initializeFiles();
     if (filesToScan.isEmpty() && !emitAllBool) {
       emitAll.emit(true);
       emitAllBool = true;
     }
   }
 
-  private void readFiles()
+  private void initializeFiles()
   {
-    if (filesToScan != null && !filesToScan.isEmpty() && historicalScanFinished && startScanningData && bufferedReaders.isEmpty()) {
+    if (filesToScan != null && !filesToScan.isEmpty() && bufferedReaders.isEmpty()) {
       for (String file : filesToScan) {
         openFile(new Path(file));
       }
@@ -322,6 +330,9 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
         newPartitions.get(i % numberOfPartitions).getPartitionedInstance().filesToScan.add(fileStatus1.getPath().toString());
         i++;
       }
+      if(context != null) {
+        DefaultPartition.assignPartitionKeys(newPartitions, dummyPort);
+      }
       return newPartitions;
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -331,7 +342,6 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   @Override
   public void beginWindow(long l)
   {
-    emit = true;
   }
 
   @Override
@@ -344,7 +354,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
       throw new RuntimeException(ex);
     }
     bufferedReaders = Lists.newArrayList();
-    readFiles();
+    initializeFiles();
   }
 
   @Override

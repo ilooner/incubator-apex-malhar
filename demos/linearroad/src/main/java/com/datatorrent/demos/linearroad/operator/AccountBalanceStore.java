@@ -62,10 +62,12 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
   @Override
   protected void processEvent(TollTuple a) throws IOException
   {
-    if (currentSecond != a.getEventTime()) {
-      processQueryTuples();
-      currentSecond = a.getEventTime();
-    }
+//    if (currentSecond != a.getEventTime()) {
+//      processQueryTuples();
+//      currentSecond = a.getEventTime();
+//    }
+
+    currentSecond = currentSecond > a.getEventTime() ? currentSecond : a.getEventTime();
     byte[] key = codec.getKeyBytes(a);
     Slice slice = new Slice(key);
     long bucketKey = getBucketKey(a);
@@ -169,8 +171,10 @@ public class AccountBalanceStore extends AbstractSinglePortHDHTWriter<TollTuple>
     super.endWindow();
     if (emitAll) {
       currentSecond = Integer.MAX_VALUE;
-      processQueryTuples();
       emitAll = false;
+    }
+    if (queryList != null && !queryList.isEmpty()) {
+      processQueryTuples();
     }
   }
 

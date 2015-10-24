@@ -73,11 +73,10 @@ public class InputReceiverTest
   public void test() throws Exception
   {
     InputReceiver oper = new InputReceiver();
+    oper.setIgnoreHeader(true);
     oper.setDirectory("file://" + new File("src/test/resources/input").getAbsolutePath());
     oper.setNumberOfPartitions(1);
-    oper.setEmitBatchSize(1);
     oper = oper.definePartitions(null, null).iterator().next().getPartitionedInstance();
-    oper.setStartScanningData(true);
 
     CollectorTestSink<Object> sink = new CollectorTestSink<>();
     oper.positionReport.setSink(sink);
@@ -88,10 +87,8 @@ public class InputReceiverTest
       oper.handleIdleTime();
       oper.endWindow();
     }
-    oper.setHistoricalScanFinished(true);
     oper.beginWindow(wid++);
-    oper.endWindow();
-    oper.beginWindow(wid);
+    oper.nextEventTime.process(1);
     oper.handleIdleTime();
     oper.endWindow();
     Assert.assertTrue("Total tuples emitted is 2", 2 == sink.collectedTuples.size());
@@ -117,10 +114,11 @@ public class InputReceiverTest
     for (int i = 1; i < 4; i++) {
       ++wid;
       oper1.beginWindow(wid);
+      oper1.nextEventTime.process(1);
       oper1.handleIdleTime();
       oper1.endWindow();
     }
-    Assert.assertTrue("Total tuples emitted is 5", 5 == sink.collectedTuples.size());
+    Assert.assertTrue("Total tuples emitted is 6", 6 == sink.collectedTuples.size());
     sink.collectedTuples.clear();
 
     bos = new ByteArrayOutputStream();
@@ -140,7 +138,15 @@ public class InputReceiverTest
       oper.handleIdleTime();
       oper.endWindow();
     }
-    Assert.assertTrue("Total tuples emitted is 2 and collected " + sink.collectedTuples.size(), 2 == sink.collectedTuples.size());
+    Assert.assertTrue("Total tuples emitted is 0 and collected " + sink.collectedTuples.size(), 0 == sink.collectedTuples.size());
+    for (int i = 1; i < 10; i++) {
+      ++wid;
+      oper.beginWindow(wid);
+      oper.nextEventTime.process(1);
+      oper.handleIdleTime();
+      oper.endWindow();
+    }
+    Assert.assertTrue("Total tuples emitted is 3 and collected " + sink.collectedTuples.size(), 3 == sink.collectedTuples.size());
     oper.teardown();
   }
 }
