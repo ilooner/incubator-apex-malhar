@@ -199,5 +199,9 @@
     <name>dt.application.LinearRoad.operator.Store.embeddableQueryInfoProvider.topic</name>
     <value>LinearRoadQueryDemo</value>
   </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.Store.partitionCount</name>
+    <value>4</value>
+  </property>
 
 </configuration>

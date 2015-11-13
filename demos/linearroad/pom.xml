@@ -13,7 +13,7 @@
 
   <properties>
     <datatorrent.version>3.2.0-incubating-SNAPSHOT</datatorrent.version>
-    <megh.version>3.2.0-SNAPSHOT</megh.version>
+    <megh.version>3.2.0-RC2</megh.version>
     <datatorrent.apppackage.classpath>lib/*.jar</datatorrent.apppackage.classpath>
   </properties>
 

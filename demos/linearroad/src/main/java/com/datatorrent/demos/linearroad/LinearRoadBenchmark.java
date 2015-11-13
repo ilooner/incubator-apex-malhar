@@ -33,6 +33,7 @@ import com.datatorrent.api.StatsListener;
 import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
 import com.datatorrent.contrib.dimensions.AppDataSingleSchemaDimensionStoreHDHT;
+import com.datatorrent.contrib.dimensions.DimensionStoreHDHTNonEmptyQueryResultUnifier;
 import com.datatorrent.contrib.hdht.tfile.TFileImpl;
 import com.datatorrent.demos.linearroad.data.AccountBalanceQuery;
 import com.datatorrent.demos.linearroad.data.DailyBalanceQuery;
@@ -98,6 +99,8 @@ public class LinearRoadBenchmark implements StreamingApplication
     store.setFileStore(hdsFile);
     store.getResultFormatter().setContinuousFormatString("#.00");
     store.setConfigurationSchemaJSON(eventSchema);
+
+    store.setQueryResultUnifier(new DimensionStoreHDHTNonEmptyQueryResultUnifier());
 
     store.setEmbeddableQueryInfoProvider(new PubSubWebSocketAppDataQuery());
     PubSubWebSocketAppDataResult wsOut = dag.addOperator("QueryResult", new PubSubWebSocketAppDataResult());
