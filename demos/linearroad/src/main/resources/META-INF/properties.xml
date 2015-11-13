@@ -1,91 +1,124 @@
 <configuration>
   <property>
     <name>dt.attr.APPLICATION_NAME</name>
-    <value>LinearRoad</value>
+    <value>LinearRoad-5-L</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.attr.MASTER_MEMORY_MB</name>
-    <value>5120</value>
+    <value>2048</value>
   </property>
   <property>
     <name>dt.attr.CONTAINER_JVM_OPTIONS</name>
-    <value>-Xmx4608m -server -Dlog4j.debug=true -Xloggc:&lt;LOG_DIR&gt;/gc.log -verbose:gc -XX:+PrintGCDateStamps
+    <value>-Xloggc:&lt;LOG_DIR&gt;/gc.log -verbose:gc -XX:+PrintGCDateStamps
     </value>
+  </property>
+  <property>
+    <name>dt.application.linearroad.kafka</name>
+    <value>false</value>
   </property>
   <property>
     <name>dt.application.linearroad.numberOfExpressWays</name>
     <value>1</value>
   </property>
   <property>
-    <name>dt.application.linearroad.enablePartitioning</name>
+    <name>dt.application.LinearRoad.enablePartitioning</name>
     <value>false</value>
   </property>
   <property>
-    <name>dt.application.linearroad.dynamicPartitioning</name>
+    <name>dt.application.LinearRoad.dynamicPartitioning</name>
     <value>false</value>
-  </property>
-
-  <property>
-    <name>dt.application.linearroad.accidentNotifier.minPartitions</name>
-    <value>1</value>
-  </property>
-  <property>
-    <name>dt.application.linearroad.accidentNotifier.maxPartitions</name>
-    <value>4</value>
-  </property>
-  <property>
-    <name>dt.application.linearroad.accidentNotifier.cooldownMillis</name>
-    <value>30000</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.flushSize</name>
-    <value>2000000</value>
+    <value>200000</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.flushIntervalCount</name>
+    <value>240</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.flushSize</name>
     <value>2000000</value>
   </property>
   <property>
-    <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.fileStore.basePath</name>
-    <value></value>
+    <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.flushIntervalCount</name>
+    <value>240</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.partitionCount</name>
+    <value>12</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.partitionCount</name>
     <value>4</value>
   </property>
   <property>
-    <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.fileStore.basePath</name>
-    <value></value>
+    <name>dt.application.LinearRoad.operator.DailyBalanceStore.prop.fileStore.basePath</name>
+    <value>/user/gaurav/linearroad/dailybalancestore-dimension</value>
   </property>
   <property>
-    <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.partitionCount</name>
-    <value>4</value>
+    <name>dt.application.LinearRoad.operator.AccountBalanceStore.prop.fileStore.basePath</name>
+    <value>/user/gaurav/linearroad/accountbalancestore-dimension</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.Receiver.prop.directory</name>
-    <value></value>
+    <value>/user/gaurav/linearroad/inputdata-5/</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.Receiver.prop.tupleBlast</name>
+    <value>24000</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.Receiver.prop.historicalScanFinished</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.Receiver.prop.startScanningData</name>
+    <value>true</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.HistoricalReceiver.prop.directory</name>
-    <value></value>
+    <value>/user/gaurav/linearroad/history-5/</value>
   </property>
+
   <property>
-    <name>dt.application.LinearRoad.operator.*.attr.MEMORY_MB</name>
-    <value>4096</value>
-  </property>
-  <property>
-    <name>dt.application.LinearRoad.operator.InitiateStreamData.prop.startScanningData</name>
-    <value>true</value>
+    <name>dt.application.LinearRoad.operator.Receiver.prop.emitBatchSize</name>
+    <value>2000</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.HistoricalReceiver.prop.emitBatchSize</name>
     <value>2000</value>
   </property>
 
+  <!-- Kafka -->
+  <property>
+    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.consumer.topic</name>
+    <value>lr</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.consumer.clientId</name>
+    <value>linearroad_poc_client</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.initialOffset</name>
+    <value>latest</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.zookeeper</name>
+    <value>node26.morado.com:2189</value>
+  </property>
+
+  <!-- disable repartitioning -->
+  <property>
+    <name>dt.application.LinearRoad.operator.KafkaReceiver.prop.repartitionInterval</name>
+    <value>-1</value>
+  </property>
+
+
   <!-- Output Operators-->
   <property>
     <name>dt.application.LinearRoad.operator.Accident-Notifier-Console.prop.filePath</name>
-    <value></value>
+    <value>/user/gaurav/linearroad/output-5-L/accident</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.Accident-Notifier-Console.prop.rotationWindows</name>
@@ -93,7 +126,7 @@
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.Toll-Notifier-Console.prop.filePath</name>
-    <value></value>
+    <value>/user/gaurav/linearroad/output-5-L/tolls</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.Toll-Notifier-Console.prop.rotationWindows</name>
@@ -101,7 +134,7 @@
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.Daily-Balance-Console.prop.filePath</name>
-    <value></value>
+    <value>/user/gaurav/linearroad/output-5-L/daily</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.Daily-Balance-Console.prop.rotationWindows</name>
@@ -109,11 +142,62 @@
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.Account-Balance-Console.prop.filePath</name>
-    <value></value>
+    <value>/user/gaurav/linearroad/output-5-L/account</value>
   </property>
   <property>
     <name>dt.application.LinearRoad.operator.Account-Balance-Console.prop.rotationWindows</name>
     <value>300</value>
+  </property>
+
+
+  <property>
+    <name>dt.application.LinearRoad.operator.*.attr.MEMORY_MB</name>
+    <value>2048</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.Accident-Notifier-Console.attr.MEMORY_MB</name>
+    <value>1024</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.Toll-Notifier-Console.attr.MEMORY_MB</name>
+    <value>1024</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.Account-Balance-Console.attr.MEMORY_MB</name>
+    <value>1024</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.Daily-Balance-Console.attr.MEMORY_MB</name>
+    <value>1024</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.AccountBalanceStore.attr.MEMORY_MB</name>
+    <value>4096</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.DailyBalanceStore.attr.MEMORY_MB</name>
+    <value>4096</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.DailyBalanceStore.attr.JVM_OPTIONS</name>
+    <value>-Xmx3584m</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.DailyBalanceStore.attr.JVM_OPTIONS</name>
+    <value>-Xmx3584m</value>
+  </property>
+
+  <property>
+    <name>dt.application.LinearRoad.operator.QueryResult.topic</name>
+    <value>LinearRoadResultDemo</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.QueryResult.numRetries</name>
+    <value>2147483647</value>
+  </property>
+  <property>
+    <name>dt.application.LinearRoad.operator.Store.embeddableQueryInfoProvider.topic</name>
+    <value>LinearRoadQueryDemo</value>
   </property>
 
 </configuration>

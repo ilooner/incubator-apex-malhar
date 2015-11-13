@@ -12,7 +12,8 @@
   <description>This defines the Linear Road Benchmark.</description>
 
   <properties>
-    <datatorrent.version>3.1.1</datatorrent.version>
+    <datatorrent.version>3.2.0-incubating-SNAPSHOT</datatorrent.version>
+    <megh.version>3.2.0-SNAPSHOT</megh.version>
     <datatorrent.apppackage.classpath>lib/*.jar</datatorrent.apppackage.classpath>
   </properties>
 
@@ -151,24 +152,47 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.datatorrent</groupId>
+      <groupId>net.sf.trove4j</groupId>
+      <artifactId>trove4j</artifactId>
+      <version>3.0.3</version>
+    </dependency>
+    <dependency>
+      <groupId>it.unimi.dsi</groupId>
+      <artifactId>fastutil</artifactId>
+      <version>6.6.4</version>
+      <type>jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.janino</groupId>
+      <artifactId>commons-compiler</artifactId>
+      <version>2.7.8</version>
+      <type>jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.janino</groupId>
+      <artifactId>janino</artifactId>
+      <version>2.7.8</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.apex</groupId>
       <artifactId>malhar-library</artifactId>
       <version>${datatorrent.version}</version>
     </dependency>
    <dependency>
       <groupId>com.datatorrent</groupId>
       <artifactId>dt-contrib</artifactId>
-      <version>${datatorrent.version}</version>
+      <version>${megh.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.datatorrent</groupId>
-      <artifactId>dt-api</artifactId>
+      <groupId>org.apache.apex</groupId>
+      <artifactId>apex-api</artifactId>
       <version>${datatorrent.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.datatorrent</groupId>
-      <artifactId>dt-common</artifactId>
+      <groupId>org.apache.apex</groupId>
+      <artifactId>apex-common</artifactId>
       <version>${datatorrent.version}</version>
       <scope>provided</scope>
     </dependency>
@@ -184,7 +208,7 @@
       <version>3.1</version>
     </dependency>
     <dependency>
-      <groupId>com.datatorrent</groupId>
+      <groupId>org.apache.apex</groupId>
       <artifactId>malhar-library</artifactId>
       <version>${datatorrent.version}</version>
       <classifier>tests</classifier>

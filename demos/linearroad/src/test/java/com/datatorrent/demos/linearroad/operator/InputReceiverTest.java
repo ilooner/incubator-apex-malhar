@@ -88,7 +88,7 @@ public class InputReceiverTest
       oper.endWindow();
     }
     oper.beginWindow(wid++);
-    oper.nextEventTime.process(1);
+    //oper.nextEventTime.process(1);
     oper.handleIdleTime();
     oper.endWindow();
     Assert.assertTrue("Total tuples emitted is 2", 2 == sink.collectedTuples.size());
@@ -114,7 +114,7 @@ public class InputReceiverTest
     for (int i = 1; i < 4; i++) {
       ++wid;
       oper1.beginWindow(wid);
-      oper1.nextEventTime.process(1);
+      //oper1.nextEventTime.process(1);
       oper1.handleIdleTime();
       oper1.endWindow();
     }
@@ -142,7 +142,7 @@ public class InputReceiverTest
     for (int i = 1; i < 10; i++) {
       ++wid;
       oper.beginWindow(wid);
-      oper.nextEventTime.process(1);
+      //oper.nextEventTime.process(1);
       oper.handleIdleTime();
       oper.endWindow();
     }

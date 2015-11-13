@@ -15,6 +15,8 @@
  */
 package com.datatorrent.demos.linearroad.data;
 
+import java.util.Date;
+
 import com.datatorrent.demos.linearroad.util.Utils;
 
 public class PositionReport extends LinearRoadTuple
@@ -54,6 +56,11 @@ public class PositionReport extends LinearRoadTuple
   public void setMinute(int minute)
   {
     this.minute = minute;
+  }
+
+  public long getTime()
+  {
+    return ((long)minute)*60L*1000L;
   }
 
   public int getVehicleId()

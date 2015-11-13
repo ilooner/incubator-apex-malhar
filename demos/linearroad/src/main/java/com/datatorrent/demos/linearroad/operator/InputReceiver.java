@@ -75,6 +75,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   private boolean ignoreHeader = false;
   private transient int currentSec = 0;
   private int nextSec = 0;
+  private int count;
 
   public boolean isIgnoreHeader()
   {
@@ -126,6 +127,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
     this.filesToScan = filesToScan;
   }
 
+  /*
   public final transient DefaultInputPort<Integer> dummyPort = new DefaultInputPort<Integer>()
   {
     @Override
@@ -133,6 +135,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
     {
     }
   };
+  */
   public final transient DefaultOutputPort<PositionReport> positionReport = new DefaultOutputPort<PositionReport>();
   public final transient DefaultOutputPort<DailyBalanceQuery> dailyBalanceQuery = new DefaultOutputPort<DailyBalanceQuery>();
   public final transient DefaultOutputPort<AccountBalanceQuery> accountBalanceQuery = new DefaultOutputPort<AccountBalanceQuery>();
@@ -168,7 +171,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   @Override
   public void emitTuples()
   {
-    if (currentSec >= nextSec || bufferedReaders == null || bufferedReaders.isEmpty()) {
+    if (/*currentSec >= nextSec ||*/ bufferedReaders == null || bufferedReaders.isEmpty()) {
       return;
     }
 
@@ -193,10 +196,11 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
             skipOffset.decrement();
           } else {
             offset.increment();
+            count--;
             emit(linearRoadTuple);
           }
         }
-        while (true) {
+        while (count > 0) {
           linearRoadTuple = readEntity();
           if (linearRoadTuple == null) {
             closeFile(br);
@@ -215,6 +219,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
             skipOffset.decrement();
           } else {
             offset.increment();
+            count--;
             emit(linearRoadTuple);
           }
         }
@@ -259,6 +264,8 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
     }
   }
 
+
+  /*
   public final transient DefaultInputPort<Integer> nextEventTime = new DefaultInputPort<Integer>()
   {
     @Override
@@ -270,6 +277,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
       }
     }
   };
+  */
 
   @Override
   public void endWindow()
@@ -330,9 +338,11 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
         newPartitions.get(i % numberOfPartitions).getPartitionedInstance().filesToScan.add(fileStatus1.getPath().toString());
         i++;
       }
+      /*
       if(context != null) {
         DefaultPartition.assignPartitionKeys(newPartitions, dummyPort);
       }
+      */
       return newPartitions;
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -342,6 +352,7 @@ public class InputReceiver implements InputOperator, Partitioner<InputReceiver>,
   @Override
   public void beginWindow(long l)
   {
+    count = 1500;
   }
 
   @Override

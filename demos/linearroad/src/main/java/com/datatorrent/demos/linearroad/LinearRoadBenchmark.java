@@ -16,8 +16,14 @@
 package com.datatorrent.demos.linearroad;
 
 import java.util.Arrays;
+import java.util.Map;
 
+import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 
 import com.datatorrent.api.Context;
 import com.datatorrent.api.DAG;
@@ -26,6 +32,8 @@ import com.datatorrent.api.Operator;
 import com.datatorrent.api.StatsListener;
 import com.datatorrent.api.StreamingApplication;
 import com.datatorrent.api.annotation.ApplicationAnnotation;
+import com.datatorrent.contrib.dimensions.AppDataSingleSchemaDimensionStoreHDHT;
+import com.datatorrent.contrib.hdht.tfile.TFileImpl;
 import com.datatorrent.demos.linearroad.data.AccountBalanceQuery;
 import com.datatorrent.demos.linearroad.data.DailyBalanceQuery;
 import com.datatorrent.demos.linearroad.data.PositionReport;
@@ -41,6 +49,13 @@ import com.datatorrent.demos.linearroad.operator.InputReceiver;
 import com.datatorrent.demos.linearroad.operator.InputSynchronizer;
 import com.datatorrent.demos.linearroad.operator.ThroughPutBasedPartitioner;
 import com.datatorrent.demos.linearroad.operator.TollNotifier;
+import com.datatorrent.lib.appdata.schemas.SchemaUtils;
+import com.datatorrent.lib.counters.BasicCounters;
+import com.datatorrent.lib.dimensions.DimensionsComputationFlexibleSingleSchemaPOJO;
+import com.datatorrent.lib.dimensions.DimensionsEvent;
+import com.datatorrent.lib.io.PubSubWebSocketAppDataQuery;
+import com.datatorrent.lib.io.PubSubWebSocketAppDataResult;
+import com.datatorrent.lib.statistics.DimensionsComputationUnifierImpl;
 
 @ApplicationAnnotation(name = "LinearRoad")
 public class LinearRoadBenchmark implements StreamingApplication
@@ -48,10 +63,54 @@ public class LinearRoadBenchmark implements StreamingApplication
   @Override
   public void populateDAG(DAG dag, Configuration configuration)
   {
+    String eventSchema = SchemaUtils.jarResourceFileToString("schema.json");
+
+    DimensionsComputationFlexibleSingleSchemaPOJO dimensions = dag.addOperator("DimensionsComputation", DimensionsComputationFlexibleSingleSchemaPOJO.class);
+    dag.getMeta(dimensions).getAttributes().put(Context.OperatorContext.APPLICATION_WINDOW_COUNT, 4);
+    dag.getMeta(dimensions).getAttributes().put(Context.OperatorContext.CHECKPOINT_WINDOW_COUNT, 4);
+    AppDataSingleSchemaDimensionStoreHDHT store = dag.addOperator("Store", AppDataSingleSchemaDimensionStoreHDHT.class);
+
+    //Set operator properties
+
+    Map<String, String> keyToExpression = Maps.newHashMap();
+    keyToExpression.put("vehicleId", "getVehicleId()");
+    keyToExpression.put("expressWayId", "getExpressWayId()");
+    keyToExpression.put("lane", "getLane()");
+    keyToExpression.put("direction", "getDirection()");
+    keyToExpression.put("segment", "getSegment()");;
+    keyToExpression.put("time", "getTime()");
+
+
+    Map<String, String> aggregateToExpression = Maps.newHashMap();
+    aggregateToExpression.put("speed", "getVehicleSpeed()");
+
+    dimensions.setKeyToExpression(keyToExpression);
+    dimensions.setAggregateToExpression(aggregateToExpression);
+    dimensions.setConfigurationSchemaJSON(eventSchema);
+
+    dimensions.setUnifier(new DimensionsComputationUnifierImpl<DimensionsEvent.InputEvent, DimensionsEvent.Aggregate>());
+    dag.getMeta(dimensions).getMeta(dimensions.output).getUnifierMeta().getAttributes().put(Context.OperatorContext.MEMORY_MB, 8092);
+
+    //Set store properties
+    TFileImpl hdsFile = new TFileImpl.DTFileImpl();
+    String basePath = "LinearRoad/Store" + Path.SEPARATOR + System.currentTimeMillis();
+    hdsFile.setBasePath(basePath);
+    store.setFileStore(hdsFile);
+    store.getResultFormatter().setContinuousFormatString("#.00");
+    store.setConfigurationSchemaJSON(eventSchema);
+
+    store.setEmbeddableQueryInfoProvider(new PubSubWebSocketAppDataQuery());
+    PubSubWebSocketAppDataResult wsOut = dag.addOperator("QueryResult", new PubSubWebSocketAppDataResult());
+
+    //Set remaining dag options
+
+    dag.addStream("DimensionalData", dimensions.output, store.input);
+    dag.addStream("QueryResult", store.queryResult, wsOut.input);
+
     int numberOfExpressWays = configuration.getInt("dt.application.linearroad.numberOfExpressWays", 1);
-    boolean enablePartitioning = configuration.getBoolean("dt.application.linearroad.enablePartitioning", true);
-    boolean dynamicPartitioning = configuration.getBoolean("dt.application.linearroad.dynamicPartitioning", false);
-    HistoricalInputReceiver historicalInputReceiver = dag.addOperator("HistoricalReceiver", new HistoricalInputReceiver());
+    boolean enablePartitioning = configuration.getBoolean("dt.application.LinearRoad.enablePartitioning", false);
+    boolean dynamicPartitioning = configuration.getBoolean("dt.application.LinearRoad.dynamicPartitioning", false);
+    //HistoricalInputReceiver historicalInputReceiver = dag.addOperator("HistoricalReceiver", new HistoricalInputReceiver());
     DefaultOutputPort<PositionReport> positionReport;
     DefaultOutputPort<DailyBalanceQuery> dailyBalanceQuery;
     DefaultOutputPort<AccountBalanceQuery> accountBalanceQuery;
@@ -63,12 +122,12 @@ public class LinearRoadBenchmark implements StreamingApplication
       dailyBalanceQuery = receiver.dailyBalanceQuery;
       accountBalanceQuery = receiver.accountBalanceQuery;
     } else { */
-    InputSynchronizer inputSynchronizer = dag.addOperator("InitiateStreamData", InputSynchronizer.class);
+    //InputSynchronizer inputSynchronizer = dag.addOperator("InitiateStreamData", InputSynchronizer.class);
     InputReceiver receiver = dag.addOperator("Receiver", new InputReceiver());
     //receiver.setScanner(new InputReceiver.CustomDirectoryScanner());
-    dag.addStream("start-stream-data", historicalInputReceiver.readCurrentData, inputSynchronizer.startScanning);
-    dag.addStream("dummy-stream", inputSynchronizer.dummyPort, receiver.dummyPort);
-    dag.addStream("stream-data", inputSynchronizer.nextEventTime, receiver.nextEventTime);
+    //dag.addStream("start-stream-data", historicalInputReceiver.readCurrentData, inputSynchronizer.startScanning);
+    //dag.addStream("dummy-stream", inputSynchronizer.dummyPort, receiver.dummyPort);
+    //dag.addStream("stream-data", inputSynchronizer.nextEventTime, receiver.nextEventTime);
     positionReport = receiver.positionReport;
     dailyBalanceQuery = receiver.dailyBalanceQuery;
     accountBalanceQuery = receiver.accountBalanceQuery;
@@ -104,10 +163,10 @@ public class LinearRoadBenchmark implements StreamingApplication
     HdfsOutputOperator dailyBalanceConsole = dag.addOperator("Daily-Balance-Console", new HdfsOutputOperator());
     HdfsOutputOperator accountBalanceConsole = dag.addOperator("Account-Balance-Console", new HdfsOutputOperator());
 
-    dag.addStream("position-report", positionReport, accidentDetector.positionReport, averageSpeedCalculator.positionReport, accidentNotifier.positionReport, tollNotifier.positionReport);
+    dag.addStream("position-report", positionReport, accidentDetector.positionReport, averageSpeedCalculator.positionReport, accidentNotifier.positionReport, tollNotifier.positionReport, dimensions.input);
     dag.addStream("current-toll-balance", tollNotifier.tollCharged, accountBalanceStore.input);
 
-    dag.addStream("historical-toll-balance", historicalInputReceiver.tollHistoryTuplePort, dailyBalanceStore.input);
+    //dag.addStream("historical-toll-balance", historicalInputReceiver.tollHistoryTuplePort, dailyBalanceStore.input);
     dag.addStream("daily-balance-query", dailyBalanceQuery, dailyBalanceStore.dailyBalanceQuery);
     dag.addStream("account-balance-query", accountBalanceQuery, accountBalanceStore.accountBalanceQuery);
 
