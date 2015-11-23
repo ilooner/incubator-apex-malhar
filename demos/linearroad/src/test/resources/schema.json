@@ -1,0 +1,16 @@
+{"keys":[{"name":"vehicleId","type":"integer"},
+  {"name":"expressWayId","type":"integer"},
+  {"name":"lane","type":"integer"},
+  {"name":"direction","type":"integer"},
+  {"name":"segment","type":"integer"}],
+  "timeBuckets":["1m"],
+  "values":
+  [{"name":"speed","type":"integer","aggregators":["AVG"]}],
+  "dimensions":
+  [{"combination":[]},
+    {"combination":["vehicleId"]},
+    {"combination":["vehicleId","expressWayId", "direction"]},
+    {"combination":["vehicleId","expressWayId", "direction", "segment"]},
+    {"combination":["expressWayId", "direction", "segment"]},
+    {"combination":["expressWayId", "direction" ]}]
+}
