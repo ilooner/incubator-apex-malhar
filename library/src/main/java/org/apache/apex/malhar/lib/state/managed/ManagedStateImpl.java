@@ -18,6 +18,7 @@
  */
 package org.apache.apex.malhar.lib.state.managed;
 
+import java.util.List;
 import java.util.concurrent.Future;
 
 import javax.validation.constraints.Min;
