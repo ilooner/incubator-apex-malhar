@@ -103,8 +103,23 @@ public class ManagedStateTest
     msu.setNumPartitions(5);
     msu.setNumBuckets(7);
 
+    MockInputPort inputPort1 = new MockInputPort();
+    MockInputPort inputPort2 = new MockInputPort();
 
-    MockPartitioningContext partitioningContext = new MockPartitioningContext();
+    MockPartitioningContext partitioningContext = new MockPartitioningContext(0, inputPort1, inputPort2);
+  }
+
+  @Test
+  public void initialParallelPartitioningTest()
+  {
+    MockPartitionableManagedStateUser msu = new MockPartitionableManagedStateUser();
+    msu.setNumPartitions(5);
+    msu.setNumBuckets(7);
+
+    MockInputPort inputPort1 = new MockInputPort();
+    MockInputPort inputPort2 = new MockInputPort();
+
+    MockPartitioningContext partitioningContext = new MockPartitioningContext(4, inputPort1, inputPort2);
   }
 
   public static class MockPartitionableManagedStateUser implements
@@ -149,12 +164,18 @@ public class ManagedStateTest
         Collection<Partition<MockPartitionableManagedStateUser>> collection,
         PartitioningContext partitioningContext)
     {
+      int totalPartitions = numPartitions;
+
+      if (partitioningContext.getParallelPartitionCount() > 0) {
+        totalPartitions = partitioningContext.getParallelPartitionCount();
+      }
+
       Kryo kryo = new Kryo();
       MockPartitionableManagedStateUser mockPartitionableManagedStateUser = collection.iterator().next()
           .getPartitionedInstance();
       List<MockPartitionableManagedStateUser> repartitioned = Lists.newArrayList();
 
-      for (int partitionCount = 0; partitionCount < numPartitions; partitionCount++) {
+      for (int partitionCount = 0; partitionCount < totalPartitions; partitionCount++) {
         MockPartitionableManagedStateUser cloned = KryoCloneUtils.cloneObject(kryo,
             mockPartitionableManagedStateUser);
         repartitioned.add(cloned);
