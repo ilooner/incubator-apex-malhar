@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.apex.malhar.lib.state.managed;
 
 import java.util.Collection;
@@ -24,12 +23,15 @@ import java.util.List;
 import java.util.Set;
 
 import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import com.datatorrent.api.DefaultPartition;
+import com.datatorrent.api.Operator;
 import com.datatorrent.api.Partitioner;
 import com.datatorrent.lib.util.KryoCloneUtils;
 
@@ -44,35 +46,52 @@ public interface ManagedState
    */
   void setMaxMemorySize(long bytes);
 
-  interface PartitionableManagedStateUser
+  interface PartitionableManagedStateUser<T extends PartitionableManagedStateUser>
   {
-    public PartitionableManagedState getPartitionableManagedState();
-    public void setPartitionableManagedState(PartitionableManagedState partitionableManagedState);
+    public PartitionableManagedState<T> getPartitionableManagedState();
+
+    public void setPartitionableManagedState(PartitionableManagedState<T> partitionableManagedState);
+
     public int getNumBuckets();
+
     public void setNumBuckets(int numBuckets);
   }
 
-  interface ManagedStatePartitioner
+  interface ManagedStatePartitioner<T extends PartitionableManagedStateUser>
   {
-    public void partition(List<Partitioner.Partition<PartitionableManagedStateUser>> repartitionedOperators,
-        List<Partitioner.Partition<PartitionableManagedStateUser>> originalOperators);
+    public List<Partitioner.Partition<T>> partition(
+        List<T> repartitionedOperators,
+        Collection<Partitioner.Partition<T>> originalOperators,
+        Partitioner.PartitioningContext context);
   }
 
-  interface PartitionableManagedState extends ManagedStatePartitioner
+  interface PartitionableManagedState<T extends PartitionableManagedStateUser> extends ManagedStatePartitioner<T>
   {
-    public BucketPartitionManager getBucketPartitionManager();
-    public void setBucketPartitionManager(BucketPartitionManager bucketPartitionManager);
+    @NotNull
+    public BucketPartitionManager<T> getBucketPartitionManager();
+
+    public void setBucketPartitionManager(@NotNull BucketPartitionManager<T> bucketPartitionManager);
+
     @Min(1)
     public int getNumBuckets();
+
     public void setNumBuckets(@Min(1) int numBuckets);
+
+    public void clearBucketData();
   }
 
-  interface BucketPartitionManager extends ManagedStatePartitioner
+  interface BucketPartitionManager<T extends PartitionableManagedStateUser> extends ManagedStatePartitioner<T>
   {
+    public void initialize(int numBuckets);
+
     public Set<Long> getBuckets();
+
     public void setBuckets(Set<Long> buckets);
 
-    public abstract class AbstractBucketPartitionManager implements BucketPartitionManager
+    public void validateBucket(long bucket);
+
+    public abstract class AbstractBucketPartitionManager<T extends PartitionableManagedStateUser> implements
+        BucketPartitionManager<T>
     {
       private Set<Long> buckets;
 
@@ -88,16 +107,46 @@ public interface ManagedState
         Preconditions.checkNotNull(buckets);
         this.buckets = buckets;
       }
+
+      @Override
+      public void validateBucket(long bucket)
+      {
+        Preconditions.checkArgument(buckets.contains(bucket));
+      }
     }
 
-    public class DefaultBucketPartitionManager extends AbstractBucketPartitionManager
+    public class DefaultBucketPartitionManager<T extends PartitionableManagedStateUser> extends AbstractBucketPartitionManager<T>
     {
+      private static final int SHIFT_MASK = 0x80000000;
+
       @Override
-      public void partition(List<Partitioner.Partition<PartitionableManagedStateUser>> repartitionedOperators,
-          List<Partitioner.Partition<PartitionableManagedStateUser>> originalOperators)
+      public void initialize(int numBuckets)
       {
+        Preconditions.checkArgument(numBuckets == getBuckets().size());
+
+        Set<Long> buckets = Sets.newHashSet();
+
+        for (long bucketCounter = 0; bucketCounter < (long)numBuckets; bucketCounter++) {
+          buckets.add(bucketCounter);
+        }
+
+        this.setBuckets(buckets);
+      }
+
+      @Override
+      public List<Partitioner.Partition<T>>
+          partition(List<T> repartitionedOperators,
+          Collection<Partitioner.Partition<T>> originalOperators,
+          Partitioner.PartitioningContext context)
+      {
+        boolean isParallelPartition = context.getParallelPartitionCount() > 0;
+
+        List<Partitioner.Partition<T>> partitions = Lists.newArrayList();
+
         int numBuckets = getNumBuckets(originalOperators);
         int numNewPartitions = repartitionedOperators.size();
+        int numPartitionKeys = roundUpToNearestPowerOf2(numBuckets);
+        int partitionMask = numPartitionKeys - 1;
 
         Preconditions.checkArgument(numBuckets > 0);
         Preconditions.checkArgument(numNewPartitions > 0);
@@ -113,10 +162,15 @@ public interface ManagedState
 
         for (int partitionCount = 0; partitionCount < numNewPartitions; partitionCount++) {
           Set<Long> buckets = Sets.newTreeSet();
+          Set<Integer> partitionKeys = Sets.newHashSet();
 
           for (int bucketPartitionCount = 0; bucketPartitionCount < numBucketsPerPartition; bucketPartitionCount++,
               bucketCounter++) {
             buckets.add(bucketCounter);
+
+            if (!isParallelPartition) {
+              partitionKeys.addAll(createPartitionKeys(bucketCounter, numBuckets, numPartitionKeys));
+            }
           }
 
           if (remainderBuckets == 0) {
@@ -125,20 +179,98 @@ public interface ManagedState
 
           bucketCounter++;
           buckets.add(bucketCounter);
+
+          if (!isParallelPartition) {
+            partitionKeys.addAll(createPartitionKeys(bucketCounter, numBuckets, numPartitionKeys));
+          }
+
+          PartitionableManagedState clonedManagedState = KryoCloneUtils.cloneObject(kryo, partitionableManagedState);
+          clonedManagedState.setNumBuckets(buckets.size());
+          clonedManagedState.getBucketPartitionManager().setBuckets(buckets);
+          clonedManagedState.clearBucketData();
+
+          T managedStateUser = repartitionedOperators.get(partitionCount);
+          managedStateUser.setPartitionableManagedState(clonedManagedState);
+
+          DefaultPartition<T> defaultPartition = new DefaultPartition<T>(managedStateUser);
+
+          if (!isParallelPartition) {
+            for (Operator.InputPort<?> inputPort : context.getInputPorts()) {
+              defaultPartition.getPartitionKeys().put(inputPort, new Partitioner.PartitionKeys(
+                  partitionMask, partitionKeys));
+            }
+          }
+
+          partitions.add(defaultPartition);
         }
 
-        KryoCloneUtils.cloneObject(kryo, )
+        return partitions;
       }
 
       private PartitionableManagedState getPartitionableManagedState(
-          List<Partitioner.Partition<PartitionableManagedStateUser>> originalOperators)
+          Collection<Partitioner.Partition<T>> originalOperators)
       {
         return originalOperators.iterator().next().getPartitionedInstance().getPartitionableManagedState();
       }
 
-      private int getNumBuckets(List<Partitioner.Partition<PartitionableManagedStateUser>> originalOperators)
+      private int getNumBuckets(Collection<Partitioner.Partition<T>> originalOperators)
       {
         return originalOperators.iterator().next().getPartitionedInstance().getNumBuckets();
+      }
+
+      public static int roundUpToNearestPowerOf2(int num)
+      {
+        Preconditions.checkArgument(num > 0);
+        Preconditions.checkArgument((SHIFT_MASK >>> 1) > num);
+
+        if (isPowerOf2(num)) {
+          return num;
+        }
+
+        int shiftCounter = 1;
+
+        for (; shiftCounter < 32; shiftCounter++) {
+          int mask = SHIFT_MASK >>> shiftCounter;
+
+          if ((mask & num) != 0) {
+            break;
+          }
+        }
+
+        shiftCounter--;
+        return shiftCounter;
+      }
+
+      public static boolean isPowerOf2(int num)
+      {
+        Preconditions.checkArgument(num > 0);
+
+        return ((~num >> 1) & num) == num;
+      }
+
+      public static int log2(int powerOf2)
+      {
+        Preconditions.checkArgument(powerOf2 > 0);
+
+        int power = 0;
+
+        for (;powerOf2 > 1;power++) {
+          powerOf2 >>= 1;
+        }
+
+        return power;
+      }
+
+      public static Set<Integer> createPartitionKeys(long bucket, int numBuckets, int numPartitionKeys)
+      {
+        Set<Integer> buckets = Sets.newHashSet();
+        int currentKey = (int)bucket;
+
+        for (;currentKey < numPartitionKeys;currentKey += numBuckets) {
+          buckets.add(currentKey);
+        }
+
+        return buckets;
       }
     }
   }

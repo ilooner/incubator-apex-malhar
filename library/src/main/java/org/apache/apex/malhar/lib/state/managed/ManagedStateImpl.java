@@ -18,24 +18,32 @@
  */
 package org.apache.apex.malhar.lib.state.managed;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Future;
 
+import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 import org.apache.apex.malhar.lib.state.BucketedState;
 
 import com.datatorrent.api.Context;
+import com.datatorrent.api.Partitioner;
 import com.datatorrent.netlet.util.Slice;
 
 /**
  * Basic implementation of {@link AbstractManagedStateImpl} where system time corresponding to an application window is
  * used to sub-group key of a particular bucket.<br/>
  */
-public class ManagedStateImpl extends AbstractManagedStateImpl implements BucketedState
+public class ManagedStateImpl<T extends ManagedState.PartitionableManagedStateUser> extends AbstractManagedStateImpl implements BucketedState,
+    ManagedState.PartitionableManagedState<T>
 {
   private long time = System.currentTimeMillis();
+
+  @Valid
+  @NotNull
+  private BucketPartitionManager bucketPartitionManager = new BucketPartitionManager.DefaultBucketPartitionManager();
   private transient long timeIncrement;
 
   public ManagedStateImpl()
@@ -49,11 +57,14 @@ public class ManagedStateImpl extends AbstractManagedStateImpl implements Bucket
     super.setup(context);
     timeIncrement = context.getValue(Context.OperatorContext.APPLICATION_WINDOW_COUNT) *
         context.getValue(Context.DAGContext.STREAMING_WINDOW_SIZE_MILLIS);
+
+    bucketPartitionManager.initialize(numBuckets);
   }
 
   @Override
   public void put(long bucketId, @NotNull Slice key, @NotNull Slice value)
   {
+    bucketPartitionManager.validateBucket(bucketId);
     long timeBucket = timeBucketAssigner.getTimeBucketFor(time);
     putInBucket(bucketId, timeBucket, key, value);
   }
@@ -61,6 +72,7 @@ public class ManagedStateImpl extends AbstractManagedStateImpl implements Bucket
   @Override
   public Slice getSync(long bucketId, @NotNull Slice key)
   {
+    bucketPartitionManager.validateBucket(bucketId);
     return getValueFromBucketSync(bucketId, -1, key);
   }
 
@@ -75,6 +87,7 @@ public class ManagedStateImpl extends AbstractManagedStateImpl implements Bucket
   @Override
   public Future<Slice> getAsync(long bucketId, @NotNull Slice key)
   {
+    bucketPartitionManager.validateBucket(bucketId);
     return getValueFromBucketAsync(bucketId, -1, key);
   }
 
@@ -83,6 +96,24 @@ public class ManagedStateImpl extends AbstractManagedStateImpl implements Bucket
   {
     super.endWindow();
     time += timeIncrement;
+  }
+
+  @Override
+  public void clearBucketData()
+  {
+    this.buckets = null;
+  }
+
+  @Override
+  public BucketPartitionManager getBucketPartitionManager()
+  {
+    return this.bucketPartitionManager;
+  }
+
+  @Override
+  public void setBucketPartitionManager(@NotNull BucketPartitionManager bucketPartitionManager)
+  {
+    this.bucketPartitionManager = bucketPartitionManager;
   }
 
   @Min(1)
@@ -97,8 +128,18 @@ public class ManagedStateImpl extends AbstractManagedStateImpl implements Bucket
    *
    * @param numBuckets number of buckets
    */
+  @Override
   public void setNumBuckets(int numBuckets)
   {
     this.numBuckets = numBuckets;
+  }
+
+  @Override
+  public List<Partitioner.Partition> partition(List repartitionedOperators, Collection originalOperators,
+      Partitioner.PartitioningContext context)
+  {
+    return this.bucketPartitionManager.partition(repartitionedOperators,
+        originalOperators,
+        context);
   }
 }
