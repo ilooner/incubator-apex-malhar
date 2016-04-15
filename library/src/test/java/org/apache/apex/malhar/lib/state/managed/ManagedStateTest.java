@@ -13,6 +13,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -101,8 +103,8 @@ public class ManagedStateTest
   public void initialPartitioningTest()
   {
     MockPartitionableManagedStateUser msu = new MockPartitionableManagedStateUser();
-    msu.setNumPartitions(3);
-    msu.setNumBuckets(16);
+    msu.setNumPartitions(4);
+    msu.setNumBuckets(9);
 
     MockInputPort inputPort1 = new MockInputPort();
     MockInputPort inputPort2 = new MockInputPort();
@@ -116,13 +118,45 @@ public class ManagedStateTest
     Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> repartitioned = msu.definePartitions(
         initialPartitions, partitioningContext);
 
-    Assert.assertEquals(5, repartitioned.size());
+    Assert.assertEquals(4, repartitioned.size());
 
-    Partitioner.PartitionKeys keys1 = new Partitioner.PartitionKeys(0x);
-    Partitioner.PartitionKeys keys2;
-    Partitioner.PartitionKeys keys3;
-    Partitioner.PartitionKeys keys4;
-    Partitioner.PartitionKeys keys5;
+    List<Set<Long>> buckets = Lists.newArrayList();
+    buckets.add(Sets.newHashSet(0L, 1L, 2L));
+    buckets.add(Sets.newHashSet(3L, 4L));
+    buckets.add(Sets.newHashSet(5L, 6L));
+    buckets.add(Sets.newHashSet(7L, 8L));
+
+    List<Partitioner.PartitionKeys> partitionKeys = Lists.newArrayList();
+    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(0, 9, 1, 10, 2, 11)));
+    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(2, 12, 4, 13)));
+    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(5, 14, 6, 15)));
+    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(7, 8)));
+
+
+  }
+
+  private void checkPartitioningResult(List<MockInputPort> inputPorts,
+      List<Set<Long>> buckets,
+      List<Partitioner.PartitionKeys> partitionKeys,
+      Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> partitions,
+      int size)
+  {
+    Assert.assertEquals(size, partitions.size());
+    int partitionCounter = 0;
+
+    for (Partitioner.Partition<MockPartitionableManagedStateUser> partition: partitions) {
+      Set<Long> pBuckets = buckets.get(partitionCounter);
+      Partitioner.PartitionKeys pPartitionKeys = partitionKeys.get(partitionCounter);
+
+      for (MockInputPort inputPort: inputPorts) {
+        Assert.assertEquals(pPartitionKeys, partition.getPartitionKeys().get(inputPort));
+      }
+
+      Assert.assertEquals(buckets,
+          partition.getPartitionedInstance().getPartitionableManagedState().getBucketPartitionManager().getBuckets());
+
+      partitionCounter++;
+    }
   }
 
   @Test
