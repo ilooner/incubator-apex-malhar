@@ -18,6 +18,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import com.datatorrent.api.DefaultInputPort;
+import com.datatorrent.api.DefaultPartition;
 import com.datatorrent.api.Operator;
 import com.datatorrent.api.Partitioner;
 import com.datatorrent.lib.util.KryoCloneUtils;
@@ -100,13 +101,28 @@ public class ManagedStateTest
   public void initialPartitioningTest()
   {
     MockPartitionableManagedStateUser msu = new MockPartitionableManagedStateUser();
-    msu.setNumPartitions(5);
-    msu.setNumBuckets(7);
+    msu.setNumPartitions(3);
+    msu.setNumBuckets(16);
 
     MockInputPort inputPort1 = new MockInputPort();
     MockInputPort inputPort2 = new MockInputPort();
 
     MockPartitioningContext partitioningContext = new MockPartitioningContext(0, inputPort1, inputPort2);
+
+    Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> initialPartitions = Lists.<Partitioner
+        .Partition<MockPartitionableManagedStateUser>>newArrayList(
+        new DefaultPartition(msu));
+
+    Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> repartitioned = msu.definePartitions(
+        initialPartitions, partitioningContext);
+
+    Assert.assertEquals(5, repartitioned.size());
+
+    Partitioner.PartitionKeys keys1 = new Partitioner.PartitionKeys(0x);
+    Partitioner.PartitionKeys keys2;
+    Partitioner.PartitionKeys keys3;
+    Partitioner.PartitionKeys keys4;
+    Partitioner.PartitionKeys keys5;
   }
 
   @Test
