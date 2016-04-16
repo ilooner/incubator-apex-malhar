@@ -25,6 +25,9 @@ import java.util.Set;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -115,9 +118,10 @@ public interface ManagedState
       }
     }
 
-    public class DefaultBucketPartitionManager<T extends PartitionableManagedStateUser> extends AbstractBucketPartitionManager<T>
+    public class DefaultBucketPartitionManager<T extends PartitionableManagedStateUser> extends
+        AbstractBucketPartitionManager<T>
     {
-      private static final int SHIFT_MASK = 0x80000000;
+      private static final int SHIFT_MASK = 0x40000000;
 
       @Override
       public void initialize(int numBuckets)
@@ -146,6 +150,7 @@ public interface ManagedState
         int numBuckets = getNumBuckets(originalOperators);
         int numNewPartitions = repartitionedOperators.size();
         int numPartitionKeys = roundUpToNearestPowerOf2(numBuckets);
+        LOG.info("numPartitionKeys {}", numPartitionKeys);
         int partitionMask = numPartitionKeys - 1;
 
         Preconditions.checkArgument(numBuckets > 0);
@@ -173,16 +178,17 @@ public interface ManagedState
             }
           }
 
-          if (remainderBuckets == 0) {
-            continue;
+          if (remainderBuckets > 0) {
+            remainderBuckets--;
+            bucketCounter++;
+            buckets.add(bucketCounter);
+
+            if (!isParallelPartition) {
+              partitionKeys.addAll(createPartitionKeys(bucketCounter, numBuckets, numPartitionKeys));
+            }
           }
 
-          bucketCounter++;
-          buckets.add(bucketCounter);
-
-          if (!isParallelPartition) {
-            partitionKeys.addAll(createPartitionKeys(bucketCounter, numBuckets, numPartitionKeys));
-          }
+          LOG.info("partition {} partitionKeys {} buckets {}", partitionCount, partitionKeys, buckets);
 
           PartitionableManagedState clonedManagedState = KryoCloneUtils.cloneObject(kryo, partitionableManagedState);
           clonedManagedState.setNumBuckets(buckets.size());
@@ -221,13 +227,13 @@ public interface ManagedState
       public static int roundUpToNearestPowerOf2(int num)
       {
         Preconditions.checkArgument(num > 0);
-        Preconditions.checkArgument((SHIFT_MASK >>> 1) > num);
+        Preconditions.checkArgument((SHIFT_MASK) > num);
 
         if (isPowerOf2(num)) {
           return num;
         }
 
-        int shiftCounter = 1;
+        int shiftCounter = 0;
 
         for (; shiftCounter < 32; shiftCounter++) {
           int mask = SHIFT_MASK >>> shiftCounter;
@@ -237,8 +243,7 @@ public interface ManagedState
           }
         }
 
-        shiftCounter--;
-        return shiftCounter;
+        return SHIFT_MASK >>> shiftCounter;
       }
 
       public static boolean isPowerOf2(int num)
@@ -274,4 +279,6 @@ public interface ManagedState
       }
     }
   }
+
+  public static final Logger LOG = LoggerFactory.getLogger(ManagedState.class);
 }

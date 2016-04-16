@@ -83,6 +83,13 @@ public class ManagedStateTest
   }
 
   @Test
+  public void roundUpToNearestPowerOf2Test9()
+  {
+    Assert.assertEquals(16,
+        ManagedState.BucketPartitionManager.DefaultBucketPartitionManager.roundUpToNearestPowerOf2(9));
+  }
+
+  @Test
   public void roundUpToNearestPowerOf2Test1055()
   {
     Assert.assertEquals(2048,
@@ -109,6 +116,8 @@ public class ManagedStateTest
     MockInputPort inputPort1 = new MockInputPort();
     MockInputPort inputPort2 = new MockInputPort();
 
+    List<MockInputPort> inputPorts = Lists.newArrayList(inputPort1, inputPort2);
+
     MockPartitioningContext partitioningContext = new MockPartitioningContext(0, inputPort1, inputPort2);
 
     Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> initialPartitions = Lists.<Partitioner
@@ -117,8 +126,6 @@ public class ManagedStateTest
 
     Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> repartitioned = msu.definePartitions(
         initialPartitions, partitioningContext);
-
-    Assert.assertEquals(4, repartitioned.size());
 
     List<Set<Long>> buckets = Lists.newArrayList();
     buckets.add(Sets.newHashSet(0L, 1L, 2L));
@@ -132,7 +139,11 @@ public class ManagedStateTest
     partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(5, 14, 6, 15)));
     partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(7, 8)));
 
-
+    checkPartitioningResult(inputPorts,
+        buckets,
+        partitionKeys,
+        repartitioned,
+        4);
   }
 
   private void checkPartitioningResult(List<MockInputPort> inputPorts,
@@ -178,7 +189,7 @@ public class ManagedStateTest
   {
     private int numPartitions;
     private int numBuckets;
-    private ManagedState.PartitionableManagedState partitionableManagedState;
+    private ManagedState.PartitionableManagedState partitionableManagedState = new MockPartitionableManagedState();
 
     public void setNumPartitions(int numPartitions)
     {
@@ -242,7 +253,8 @@ public class ManagedStateTest
   }
 
   public static class MockPartitionableManagedState implements ManagedState.PartitionableManagedState {
-    private ManagedState.BucketPartitionManager bucketPartitionManager;
+    private ManagedState.BucketPartitionManager bucketPartitionManager =
+        new ManagedState.BucketPartitionManager.DefaultBucketPartitionManager();
     private int numBuckets;
 
     @Override
