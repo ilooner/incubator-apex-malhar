@@ -180,12 +180,13 @@ public interface ManagedState
 
           if (remainderBuckets > 0) {
             remainderBuckets--;
-            bucketCounter++;
             buckets.add(bucketCounter);
 
             if (!isParallelPartition) {
               partitionKeys.addAll(createPartitionKeys(bucketCounter, numBuckets, numPartitionKeys));
             }
+
+            bucketCounter++;
           }
 
           LOG.info("partition {} partitionKeys {} buckets {}", partitionCount, partitionKeys, buckets);
@@ -227,7 +228,7 @@ public interface ManagedState
       public static int roundUpToNearestPowerOf2(int num)
       {
         Preconditions.checkArgument(num > 0);
-        Preconditions.checkArgument((SHIFT_MASK) > num);
+        Preconditions.checkArgument(SHIFT_MASK > num);
 
         if (isPowerOf2(num)) {
           return num;
@@ -235,7 +236,7 @@ public interface ManagedState
 
         int shiftCounter = 0;
 
-        for (; shiftCounter < 32; shiftCounter++) {
+        for (; shiftCounter < 31; shiftCounter++) {
           int mask = SHIFT_MASK >>> shiftCounter;
 
           if ((mask & num) != 0) {
@@ -243,6 +244,7 @@ public interface ManagedState
           }
         }
 
+        shiftCounter--;
         return SHIFT_MASK >>> shiftCounter;
       }
 
@@ -250,7 +252,7 @@ public interface ManagedState
       {
         Preconditions.checkArgument(num > 0);
 
-        return ((~num >> 1) & num) == num;
+        return num != 0 && ((num & (num - 1)) == 0);
       }
 
       public static int log2(int powerOf2)
