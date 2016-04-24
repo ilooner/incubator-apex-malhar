@@ -1,6 +1,7 @@
 package org.apache.apex.malhar.lib.state.managed;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,9 +14,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec;
-
 import com.esotericsoftware.kryo.Kryo;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -113,8 +113,8 @@ public class ManagedStateTest
     msu.setNumPartitions(4);
     msu.setNumBuckets(9);
 
-    MockInputPort inputPort1 = new MockInputPort();
-    MockInputPort inputPort2 = new MockInputPort();
+    MockInputPort inputPort1 = new MockInputPort(1);
+    MockInputPort inputPort2 = new MockInputPort(2);
 
     List<MockInputPort> inputPorts = Lists.newArrayList(inputPort1, inputPort2);
 
@@ -127,23 +127,9 @@ public class ManagedStateTest
     Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> repartitioned = msu.definePartitions(
         initialPartitions, partitioningContext);
 
-    List<Set<Long>> buckets = Lists.newArrayList();
-    buckets.add(Sets.newHashSet(0L, 1L, 2L));
-    buckets.add(Sets.newHashSet(3L, 4L));
-    buckets.add(Sets.newHashSet(5L, 6L));
-    buckets.add(Sets.newHashSet(7L, 8L));
+    Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> expected = create4Partitions9Buckets();
 
-    List<Partitioner.PartitionKeys> partitionKeys = Lists.newArrayList();
-    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(0, 9, 1, 10, 2, 11)));
-    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(3, 12, 4, 13)));
-    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(5, 14, 6, 15)));
-    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(7, 8)));
-
-    checkPartitioningResult(inputPorts,
-        buckets,
-        partitionKeys,
-        repartitioned,
-        4);
+    checkPartitioningResult(expected, repartitioned);
   }
 
   @Test
@@ -153,8 +139,8 @@ public class ManagedStateTest
     msu.setNumPartitions(5);
     msu.setNumBuckets(9);
 
-    MockInputPort inputPort1 = new MockInputPort();
-    MockInputPort inputPort2 = new MockInputPort();
+    MockInputPort inputPort1 = new MockInputPort(1);
+    MockInputPort inputPort2 = new MockInputPort(2);
 
     List<MockInputPort> inputPorts = Lists.newArrayList(inputPort1, inputPort2);
 
@@ -179,23 +165,51 @@ public class ManagedStateTest
     partitionKeys.add(null);
     partitionKeys.add(null);
 
-    checkPartitioningResult(inputPorts,
+    Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> expected = createPartitionsBuckets(
         buckets,
-        partitionKeys,
-        repartitioned,
-        4);
+        partitionKeys);
+
+    checkPartitioningResult(expected, repartitioned);
+  }
+
+  @Test
+  public void scaleUpTest()
+  {
+    Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> twoPartitions = create2Partitions9Buckets();
+    Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> fivePartitions = create5Partitions9Buckets();
+
+    scaleTest(twoPartitions, fivePartitions);
+  }
+
+  @Test
+  public void scaleDownTest()
+  {
+    Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> fivePartitions = create5Partitions9Buckets();
+    Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> twoPartitions = create2Partitions9Buckets();
+
+    scaleTest(fivePartitions, twoPartitions);
+  }
+
+  private void scaleTest(Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> initial,
+      Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> expected)
+  {
+    MockInputPort inputPort1 = new MockInputPort(1);
+    MockInputPort inputPort2 = new MockInputPort(2);
+
+    MockPartitioningContext partitioningContext = new MockPartitioningContext(0, inputPort1, inputPort2);
+
+    for (Partitioner.Partition<MockPartitionableManagedStateUser> partition: initial) {
+      partition.getPartitionedInstance().setNumPartitions(expected.size());
+    }
+
+    Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> actual = initial.iterator().next()
+        .getPartitionedInstance().definePartitions(initial, partitioningContext);
+
+    this.checkPartitioningResult(actual, expected);
   }
 
   private Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> create4Partitions9Buckets()
   {
-    Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> partitionInstances =
-        Lists.newArrayList();
-
-    MockInputPort inputPort1 = new MockInputPort();
-    MockInputPort inputPort2 = new MockInputPort();
-
-    List<MockInputPort> inputPorts = Lists.newArrayList(inputPort1, inputPort2);
-
     List<Set<Long>> buckets = Lists.newArrayList();
     buckets.add(Sets.newHashSet(0L, 1L, 2L));
     buckets.add(Sets.newHashSet(3L, 4L));
@@ -208,46 +222,125 @@ public class ManagedStateTest
     partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(5, 14, 6, 15)));
     partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(7, 8)));
 
-    for (int partitionCounter = 0; partitionCounter < 4; partitionCounter++) {
+    return createPartitionsBuckets(buckets, partitionKeys);
+  }
+
+  private Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> create2Partitions9Buckets()
+  {
+    List<Set<Long>> buckets = Lists.newArrayList();
+    buckets.add(Sets.newHashSet(0L, 1L, 2L, 3L, 4L));
+    buckets.add(Sets.newHashSet(5L, 6L, 7L, 8L));
+
+    List<Partitioner.PartitionKeys> partitionKeys = Lists.newArrayList();
+    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(0, 9, 1, 10, 2, 11, 3, 12, 4, 13)));
+    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(5, 14, 6, 15, 7, 8)));
+
+    return createPartitionsBuckets(buckets, partitionKeys);
+  }
+
+  private Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> create5Partitions9Buckets()
+  {
+    List<Set<Long>> buckets = Lists.newArrayList();
+    buckets.add(Sets.newHashSet(0L, 1L));
+    buckets.add(Sets.newHashSet(2L, 3L));
+    buckets.add(Sets.newHashSet(4L, 5L));
+    buckets.add(Sets.newHashSet(6L, 7L));
+    buckets.add(Sets.newHashSet(8L));
+
+    List<Partitioner.PartitionKeys> partitionKeys = Lists.newArrayList();
+    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(0, 9, 1, 10)));
+    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(2, 11, 3, 12)));
+    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(4, 13, 5, 14)));
+    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(6, 15, 7)));
+    partitionKeys.add(new Partitioner.PartitionKeys(0x0F, Sets.newHashSet(8)));
+
+    return createPartitionsBuckets(buckets, partitionKeys);
+  }
+
+  private Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> createPartitionsBuckets(
+      List<Set<Long>> buckets,
+      List<Partitioner.PartitionKeys> partitionKeys)
+  {
+    int numBuckets = 0;
+
+    for (Set<Long> bucketSet: buckets) {
+      numBuckets += bucketSet.size();
+    }
+
+    Preconditions.checkArgument(buckets.size() > 0);
+    Preconditions.checkArgument(buckets.size() == partitionKeys.size());
+
+    Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> partitionInstances =
+        Lists.newArrayList();
+
+    MockInputPort inputPort1 = new MockInputPort(1);
+    MockInputPort inputPort2 = new MockInputPort(2);
+
+    List<MockInputPort> inputPorts = Lists.newArrayList(inputPort1, inputPort2);
+
+    for (int partitionCounter = 0; partitionCounter < buckets.size(); partitionCounter++) {
       Set<Long> tempBuckets = buckets.get(partitionCounter);
       Partitioner.PartitionKeys tempPartitionKeys = partitionKeys.get(partitionCounter);
 
       MockPartitionableManagedStateUser msu = new MockPartitionableManagedStateUser();
-      msu.setNumBuckets(tempBuckets.size());
+      msu.setNumBuckets(numBuckets);
+      msu.getPartitionableManagedState().setNumBuckets(tempBuckets.size());
       msu.getPartitionableManagedState().getBucketPartitionManager().setBuckets(tempBuckets);
 
-      DefaultPartition partition = new DefaultPartition(msu);
-
-
-      partition.getPartitionKeys().
-    }
-
-  }
-
-  private void checkPartitioningResult(List<MockInputPort> inputPorts,
-      List<Set<Long>> buckets,
-      List<Partitioner.PartitionKeys> partitionKeys,
-      Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> partitions,
-      int size)
-  {
-    Assert.assertEquals(size, partitions.size());
-    int partitionCounter = 0;
-
-    for (Partitioner.Partition<MockPartitionableManagedStateUser> partition: partitions) {
-      Set<Long> pBuckets = buckets.get(partitionCounter);
-      Partitioner.PartitionKeys pPartitionKeys = partitionKeys.get(partitionCounter);
+      DefaultPartition<MockPartitionableManagedStateUser> partition =
+          new DefaultPartition<MockPartitionableManagedStateUser>(msu);
 
       for (MockInputPort inputPort: inputPorts) {
-
-        Partitioner.PartitionKeys tempPartitionKeys = partition.getPartitionKeys().get(inputPort);
-
-        Assert.assertEquals(pPartitionKeys, tempPartitionKeys);
+        partition.getPartitionKeys().put(inputPort, tempPartitionKeys);
       }
 
-      Assert.assertEquals(pBuckets,
-          partition.getPartitionedInstance().getPartitionableManagedState().getBucketPartitionManager().getBuckets());
+      partitionInstances.add(partition);
+    }
 
-      partitionCounter++;
+    return partitionInstances;
+  }
+
+  private void checkPartitioningResult(Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> expected,
+      Collection<Partitioner.Partition<MockPartitionableManagedStateUser>> actual)
+  {
+    Assert.assertEquals(expected.size(), actual.size());
+    int partitionCounter = 0;
+
+    Iterator<Partitioner.Partition<MockPartitionableManagedStateUser>> expectedIt = expected.iterator();
+    Iterator<Partitioner.Partition<MockPartitionableManagedStateUser>> actualIt = actual.iterator();
+
+    MockInputPort inputPort1 = new MockInputPort(1);
+    MockInputPort inputPort2 = new MockInputPort(2);
+
+    List<MockInputPort> inputPorts = Lists.newArrayList(inputPort1, inputPort2);
+
+    while (expectedIt.hasNext())
+    {
+      Partitioner.Partition<MockPartitionableManagedStateUser> expectedPartition = expectedIt.next();
+      MockPartitionableManagedStateUser expectedMSU = expectedPartition.getPartitionedInstance();
+      int expectedNumBuckets = expectedMSU.getNumBuckets();
+
+      Partitioner.Partition<MockPartitionableManagedStateUser> actualPartition = actualIt.next();
+      MockPartitionableManagedStateUser actualMSU = actualPartition.getPartitionedInstance();
+      int actualNumBuckets = actualMSU.getNumBuckets();
+
+      Assert.assertEquals(expectedNumBuckets, actualNumBuckets);
+
+      Assert.assertEquals(expectedMSU.getPartitionableManagedState().getNumBuckets(),
+          actualMSU.getPartitionableManagedState().getNumBuckets());
+
+      Assert.assertEquals(expectedMSU.getPartitionableManagedState().getBucketPartitionManager().getBuckets(),
+          actualMSU.getPartitionableManagedState().getBucketPartitionManager().getBuckets());
+
+      Assert.assertEquals(expectedNumBuckets, actualNumBuckets);
+
+      for (MockInputPort inputPort: inputPorts) {
+        LOG.info("size {}", expectedPartition.getPartitionKeys().size());
+        Partitioner.PartitionKeys expectedPartitionKeys = expectedPartition.getPartitionKeys().get(inputPort);
+        Partitioner.PartitionKeys actualPartitionKeys = actualPartition.getPartitionKeys().get(inputPort);
+
+        Assert.assertEquals(expectedPartitionKeys, actualPartitionKeys);
+      }
     }
   }
 
@@ -410,9 +503,38 @@ public class ManagedStateTest
 
   public static class MockInputPort extends DefaultInputPort
   {
+    private int id;
+
+    public MockInputPort(int id)
+    {
+      this.id = id;
+    }
+
     @Override
     public void process(Object o)
     {
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      MockInputPort that = (MockInputPort)o;
+
+      return id == that.id;
+
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return id;
     }
   }
 
